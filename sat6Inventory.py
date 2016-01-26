@@ -101,10 +101,12 @@ except Exception, e:
 
 csv_writer_subs = csv.writer(open(orgid + "_inventory_report.csv", "wb"), delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
-title_row = ['Name', 'Subscription Name', 'Amount', 'Account #', 'Contract #',
-             'Start Date', 'End Date', 'BIOS Vendor', 'BIOS Version',
+title_row = ['UUID','Name', 'Compliant', 'Subscription Name', 'Amount',
+             'Account #', 'Contract #', 'Start Date', 'End Date',
+             'Phys CPU Count', 'Cores', 'Virtual', 'Hypervisor', 'OS Family',
+             'Operating System', 'BIOS Vendor', 'BIOS Version',
              'BIOS Release Date', 'System Manufacturer', 'System Product Name',
-             'Serial Number', 'UUID', 'Chassis Manufacturer', 'Type',
+             'Serial Number', 'Board UUID', 'Chassis Manufacturer', 'Type',
              'Chassis Serial #', 'Chassis Product Name']
 
 csv_writer_subs.writerow(title_row)
@@ -117,40 +119,55 @@ if VERBOSE:
 if DEBUG:
     with open(orgid + '_all_systems-output.json', 'w') as outfile:
         json.dump(systemdata, outfile)
+    outfile.close()
+
+sub_summary = {}
+incompliant = {}
 
 for system in systemdata:
-    detailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
+    sysdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "?fields=full"
+    subdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
     hostdetailedurl = "https://" + satellite + "/api/v2/hosts/" + system["name"] + "/facts?per_page=99999"
 
     if VERBOSE:
         print "=" * 80
-        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, detailedurl)
+        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, sysdetailedurl)
+        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, subdetailedurl)
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, hostdetailedurl)
     try:
-        sysinfo = urllib2.Request(detailedurl)
+        sysinfo = urllib2.Request(sysdetailedurl)
+        subinfo = urllib2.Request(subdetailedurl)
         hostinfo = urllib2.Request(hostdetailedurl)
         base64string = base64.encodestring('%s:%s' % (login, password)).strip()
         sysinfo.add_header("Authorization", "Basic %s" % base64string)
         sysresult = urllib2.urlopen(sysinfo)
+        subinfo.add_header("Authorization", "Basic %s" % base64string)
+        subresult = urllib2.urlopen(subinfo)
         hostinfo.add_header("Authorization", "Basic %s" % base64string)
         hostresult = urllib2.urlopen(hostinfo)
+
         sysdata = json.load(sysresult)
-        hostresult = urllib2.urlopen(hostinfo)
+        subdata = json.load(subresult)
         hostdata = json.load(hostresult)
         if DEBUG:
-            filename = orgid + '_' + system['name'] + '_system-output.json'
+            filename = orgid + '_' + system['uuid'] + '_system-output.json'
             print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
-                json.dump(systemdata, outfile)
+                json.dump(sysdata, outfile)
             outfile.close()
-            filename = orgid + '_' + system['name'] + '_system-facts.json'
-            print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
+            filename = orgid + '_' + system['uuid'] + '_subscription-output.json'
+            print "[%sDEBUG%s] Subscription output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
+            with open(filename, 'w') as outfile:
+                json.dump(subdata, outfile)
+            outfile.close()
+            filename = orgid + '_' + system['uuid'] + '_system-facts.json'
+            print "[%sDEBUG%s] Facts output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(hostdata, outfile)
             outfile.close()
     except Exception, e:
         print "FATAL Error - %s" % (e)
-    for entitlement in sysdata["results"]:
+    for entitlement in subdata["results"]:
         # Get the Amount of subs
         amount = entitlement['amount']
         subName = entitlement['product_name']
@@ -158,6 +175,16 @@ for system in systemdata:
         contractNumber = entitlement['contract_number']
         startDate = entitlement['start_date']
         endDate = entitlement['end_date']
+        hypervisor = "NA"
+        virtual = "NA"
+        if entitlement.has_key('host'):
+            hypervisor = entitlement['host']['id']
+            virtual = 'virtual'
+        compliant = "NA"
+        if sysdata.has_key('compliance'):
+            compliant = sysdata['compliance']['compliant']
+            if not compliant:
+                incompliant[system['uuid']] = system['name']
         biosvendor = "NA"
         biosversion = "NA"
         biosreleasedate = "NA"
@@ -170,6 +197,12 @@ for system in systemdata:
         boardserialnumber = "NA"
         boardproductname = "NA"
         billingCode = "NA"
+        physicalprocessorcount = "NA"
+        cores = "NA"
+        memorysize = "NA"
+        ipaddress = "NA"
+        osfamily = "NA"
+        operatingsystem = "NA"
         if hostdata['subtotal'] > 0:
             if 'bios_vendor' in hostdata['results'][system['name']]:
                 biosvendor = hostdata['results'][system['name']]['bios_vendor']
@@ -179,7 +212,7 @@ for system in systemdata:
                 biosreleasedate = hostdata['results'][system['name']]['bios_release_date']
             if 'manufacturer' in hostdata['results'][system['name']]:
                 manufacturer = hostdata['results'][system['name']]['manufacturer']
-            if 'proudctname' in hostdata['results'][system['name']]:
+            if 'productname' in hostdata['results'][system['name']]:
                 productname = hostdata['results'][system['name']]['productname']
             if 'serialnumber' in hostdata['results'][system['name']]:
                 serialnumber = hostdata['results'][system['name']]['serialnumber']
@@ -191,11 +224,35 @@ for system in systemdata:
                 systype = hostdata['results'][system['name']]['type']
             if 'boardserialnumber' in hostdata['results'][system['name']]:
                 boardserialnumber = hostdata['results'][system['name']]['boardserialnumber']
-            if 'boardproductname' in hostdata['results'][system['name']]:
+            if 'boardproductmame' in hostdata['results'][system['name']]:
                 boardproductname = hostdata['results'][system['name']]['boardproductname']
+            if 'physicalprocessorcount' in hostdata['results'][system['name']]:
+                physicalprocessorcount = hostdata['results'][system['name']]['physicalprocessorcount']
+            if 'processorcount' in hostdata['results'][system['name']]:
+                cores = hostdata['results'][system['name']]['processorcount']
+            if 'memorysize' in hostdata['results'][system['name']]:
+                memorysize = hostdata['results'][system['name']]['memorysize']
+            if 'ipaddress' in hostdata['results'][system['name']]:
+                ipaddress = hostdata['results'][system['name']]['ipaddress']
+            if 'virtual' in hostdata['results'][system['name']]:
+                virtual = hostdata['results'][system['name']]['virtual']
+            if 'osfamiliy' in hostdata['results'][system['name']]:
+                osfamiliy = hostdata['results'][system['name']]['osfamiliy']
+            if 'operatingsystem' in hostdata['results'][system['name']]:
+                operatingsystem = hostdata['results'][system['name']]['operatingsystem']
+        if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
+            virtual = 'hypervisor'
+        if not subName in sub_summary:
+            sub_summary[subName] = {}
+        if virtual in sub_summary[subName]:
+            sub_summary[subName][virtual] += amount
+        else:
+            sub_summary[subName][virtual] = amount
 
         if VERBOSE:
+            print "\tSystem UUID - %s" % system['uuid']
             print "\tSystem Name - %s" % system['name']
+            print "\tCompliant - %s" % compliant
             print "\tSubscription Name - %s" % subName
             print "\tAmount - %s" % amount
             print "\tAccount Number - %s" % acctNumber
@@ -203,12 +260,18 @@ for system in systemdata:
             print "\tStart Date - %s" % startDate
             print "\tEnd Date - %s" % endDate
             print "\tBIOS Vendor - %s" % biosvendor
+            print "\tPhys CPU Count - %s" % physicalprocessorcount
+            print "\tCores - %s" % cores
+            print "\tVirtual - %s" % virtual
+            print "\tHypervisor - %s" % hypervisor
+            print "\tOS Family - %s" % osfamily
+            print "\tOperating System - %s" % operatingsystem
             print "\tBIOS Version - %s" % biosversion
             print "\tBIOS Release Date - %s" % biosreleasedate
             print "\tBIOS manufacturer - %s" % manufacturer
             print "\tProduct Name - %s" % productname
             print "\tSerial Number - %s" % serialnumber
-            print "\tUUID - %s" % uuid
+            print "\tBoard UUID - %s" % uuid
             print "\tBoard Manufacturer - %s" % boardmanufacturer
             print "\tType - %s" % systype
             print "\tBoard Serial Number - %s" % boardserialnumber
@@ -216,7 +279,23 @@ for system in systemdata:
             print "=" * 80
             print
 
-        csv_writer_subs.writerow([system['name'], subName, amount, acctNumber, contractNumber,
-                                  startDate, endDate, biosvendor, biosversion, biosreleasedate,
-                                  manufacturer, productname, serialnumber, uuid, boardmanufacturer,
+        csv_writer_subs.writerow([system['uuid'], system['name'], compliant,
+                                  subName, amount, acctNumber, contractNumber,
+                                  startDate, endDate, physicalprocessorcount,
+                                  cores, virtual, hypervisor, osfamily,
+                                  operatingsystem, biosvendor, biosversion,
+                                  biosreleasedate, manufacturer, productname,
+                                  serialnumber, uuid, boardmanufacturer,
                                   systype, boardserialnumber, boardproductname])
+
+print "\nSubscription Usage Summary:"
+for subscription in sub_summary:
+    print "%s -->" % subscription
+    for virtual in sub_summary[subscription]:
+        print "\t%s\t- %s" % (virtual,sub_summary[subscription][virtual])
+
+if len (incompliant) > 0:
+    print "\nThere are %s incompliant systems:" % len(incompliant)
+    print "\t\tUUID\t\t\t\tName"
+    for system in incompliant:
+        print "%s\t- %s" % (system, incompliant[system])
