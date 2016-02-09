@@ -89,7 +89,7 @@ except urllib2.URLError, e:
     print "Error: cannot connect to the API: %s" % (e)
     print "Check your URL & try to login using the same user/pass via the WebUI and check the error!"
     sys.exit(1)
-except:
+except Exception, e:
     print "FATAL Error - %s" % (e)
     sys.exit(2)
 
