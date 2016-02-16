@@ -74,22 +74,28 @@ if options.verbose:
 if hasattr(ssl, '_create_unverified_context'):
     ssl._create_default_https_context = ssl._create_unverified_context
 
-
-url = "https://" + satellite + "/katello/api/v2/systems?full=true"
+systemdata = []
 
 try:
-    request = urllib2.Request(url)
-    if VERBOSE:
-        print "=" * 80
-        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, url)
-    base64string = base64.encodestring('%s:%s' % (login, password)).strip()
-    request.add_header("Authorization", "Basic %s" % base64string)
-    result = urllib2.urlopen(request)
+    page = 0
+    while (page == 0 or jsonresult['per_page'] == len(jsonresult['results'])):
+        page += 1
+        url = "https://" + satellite + "/katello/api/v2/systems?full=true&page=" + str(page)
+        request = urllib2.Request(url)
+        if VERBOSE:
+            print "=" * 80
+            print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, url)
+        base64string = base64.encodestring('%s:%s' % (login, password)).strip()
+        request.add_header("Authorization", "Basic %s" % base64string)
+        result = urllib2.urlopen(request)
+        jsonresult = json.load(result)
+        systemdata += jsonresult['results']
+
 except urllib2.URLError, e:
     print "Error: cannot connect to the API: %s" % (e)
     print "Check your URL & try to login using the same user/pass via the WebUI and check the error!"
     sys.exit(1)
-except:
+except Exception, e:
     print "FATAL Error - %s" % (e)
     sys.exit(2)
 
@@ -106,14 +112,13 @@ csv_writer_subs.writerow(title_row)
 if VERBOSE:
     print "[%sVERBOSE%s] Data will be written to %s_inventory_report.csv" % (error_colors.OKGREEN, error_colors.ENDC, orgid)
 
-systemdata = json.load(result)
 
 
 if DEBUG:
     with open(orgid + '_all_systems-output.json', 'w') as outfile:
         json.dump(systemdata, outfile)
 
-for system in systemdata["results"]:
+for system in systemdata:
     detailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
     hostdetailedurl = "https://" + satellite + "/api/v2/hosts/" + system["name"] + "/facts?per_page=99999"
 
