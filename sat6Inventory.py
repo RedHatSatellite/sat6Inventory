@@ -66,7 +66,6 @@ _facts_mapping = {
     'systype': 'type',
     'boardserialnumber': 'boardserialnumber',
     'boardproductname': 'boardproductname',
-    'physicalprocessorcount': 'physicalprocessorcount',
     'memorysize': 'memorysize',
     'virtual': 'virtual',
     'osfamiliy': 'osfamiliy',
