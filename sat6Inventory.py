@@ -25,6 +25,55 @@ import ssl
 import csv
 from optparse import OptionParser
 
+_sysdata_mapping = {
+    'uuid': 'uuid',
+    'hostname': 'name',
+    'registered_by': 'registered_by',
+    'registration_time': 'created',
+    'last_checkin_time': 'checkin_time',
+    'katello_agent_installed': 'katello_agent_installed',
+}
+
+_sysdata_facts_mapping = {
+    'ip_address': 'network.ipv4_address',
+    'ipv6_address': 'network.ipv6_address',
+    'virt_type': 'virt.host_type',
+    'kernel_version': 'uname.release',
+    'architecture': 'uname.machine',
+    'is_virtualized': 'virt.is_guest',
+    'cores': 'cpu.cpu(s)',
+    'num_sockets': 'cpu.cpu_socket(s)',
+}
+
+_sysdata_virtual_host_mapping = {
+    'virtual_host': 'uuid',
+    'virtual_host_name': 'name',
+}
+_sysdata_errata_mapping = {
+    'errata_out_of_date': 'total',
+    'packages_out_of_date': 'total',
+}
+
+_facts_mapping = {
+    'biosvendor': 'bios_vendor',
+    'biosversion': 'bios_version',
+    'biosreleasedate': 'bios_release_date',
+    'manufacturer': 'manufacturer',
+    'productname': 'productname',
+    'serialnumber': 'serialnumber',
+    'systemuuid': 'uuid',
+    'boardmanufacturer': 'boardmanufacturer',
+    'systype': 'type',
+    'boardserialnumber': 'boardserialnumber',
+    'boardproductname': 'boardproductname',
+    'physicalprocessorcount': 'physicalprocessorcount',
+    'memorysize': 'memorysize',
+    'virtual': 'virtual',
+    'osfamiliy': 'osfamiliy',
+    'operatingsystem': 'operatingsystem',
+}
+
+
 parser = OptionParser()
 parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN")
 parser.add_option("-p", "--password", dest="password", help="Password for specified user. Will prompt if omitted", metavar="PASSWORD")
@@ -109,6 +158,7 @@ title_row = ['UUID','Name', 'Compliant', 'Subscription Name', 'Amount',
              'BIOS Release Date', 'System Manufacturer', 'System Product Name',
              'Serial Number', 'Board UUID', 'Chassis Manufacturer', 'Type',
              'Chassis Serial #', 'Chassis Product Name']
+title_row = ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware']
 
 csv_writer_subs.writerow(title_row)
 
@@ -193,61 +243,37 @@ for system in systemdata:
             compliant = sysdata['compliance']['compliant']
             if not compliant:
                 incompliant[system['uuid']] = system['name']
-        biosvendor = "NA"
-        biosversion = "NA"
-        biosreleasedate = "NA"
-        manufacturer = "NA"
-        productname = "NA"
-        serialnumber = "NA"
-        uuid = "NA"
-        boardmanufacturer = "NA"
-        systype = "NA"
-        boardserialnumber = "NA"
-        boardproductname = "NA"
-        billingCode = "NA"
-        physicalprocessorcount = "NA"
-        cores = "NA"
-        memorysize = "NA"
-        ipaddress = "NA"
-        osfamily = "NA"
-        operatingsystem = "NA"
+
+        host_info = {}
+        fake = ['software_channel', 'configuration_channel', 'system_group']
+        for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
+            host_info[key] = 'unknown'
+
+        for key in _sysdata_mapping.keys():
+            if _sysdata_mapping[key] in sysdata:
+                host_info[key] = sysdata[_sysdata_mapping[key]]
+
+        if 'facts' in sysdata and sysdata['facts']:
+            for key in _sysdata_facts_mapping.keys():
+                if _sysdata_facts_mapping[key] in sysdata['facts']:
+                    host_info[key] = sysdata['facts'][_sysdata_facts_mapping[key]]
+
+        if 'virtual_host' in sysdata and sysdata['virtual_host']:
+            for key in _sysdata_virtual_host_mapping.keys():
+                if _sysdata_virtual_host_mapping[key] in sysdata['virtual_host']:
+                    host_info[key] = sysdata['virtual_host'][_sysdata_virtual_host_mapping[key]]
+
+        if 'errata_counts' in sysdata and sysdata['errata_counts']:
+            for key in _sysdata_errata_mapping.keys():
+                if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
+                    host_info[key] = sysdata['errata_counts'][_sysdata_errata_mapping[key]]
+
         if hostdata['subtotal'] > 0:
-            if 'bios_vendor' in hostdata['results'][system['name']]:
-                biosvendor = hostdata['results'][system['name']]['bios_vendor']
-            if 'bios_version' in hostdata['results'][system['name']]:
-                biosversion = hostdata['results'][system['name']]['bios_version']
-            if 'bios_release_date' in hostdata['results'][system['name']]:
-                biosreleasedate = hostdata['results'][system['name']]['bios_release_date']
-            if 'manufacturer' in hostdata['results'][system['name']]:
-                manufacturer = hostdata['results'][system['name']]['manufacturer']
-            if 'productname' in hostdata['results'][system['name']]:
-                productname = hostdata['results'][system['name']]['productname']
-            if 'serialnumber' in hostdata['results'][system['name']]:
-                serialnumber = hostdata['results'][system['name']]['serialnumber']
-            if 'uuid' in hostdata['results'][system['name']]:
-                uuid = hostdata['results'][system['name']]['uuid']
-            if 'boardmanufacturer' in hostdata['results'][system['name']]:
-                boardmanufacturer = hostdata['results'][system['name']]['boardmanufacturer']
-            if 'type' in hostdata['results'][system['name']]:
-                systype = hostdata['results'][system['name']]['type']
-            if 'boardserialnumber' in hostdata['results'][system['name']]:
-                boardserialnumber = hostdata['results'][system['name']]['boardserialnumber']
-            if 'boardproductmame' in hostdata['results'][system['name']]:
-                boardproductname = hostdata['results'][system['name']]['boardproductname']
-            if 'physicalprocessorcount' in hostdata['results'][system['name']]:
-                physicalprocessorcount = hostdata['results'][system['name']]['physicalprocessorcount']
-            if 'processorcount' in hostdata['results'][system['name']]:
-                cores = hostdata['results'][system['name']]['processorcount']
-            if 'memorysize' in hostdata['results'][system['name']]:
-                memorysize = hostdata['results'][system['name']]['memorysize']
-            if 'ipaddress' in hostdata['results'][system['name']]:
-                ipaddress = hostdata['results'][system['name']]['ipaddress']
-            if 'virtual' in hostdata['results'][system['name']]:
-                virtual = hostdata['results'][system['name']]['virtual']
-            if 'osfamiliy' in hostdata['results'][system['name']]:
-                osfamiliy = hostdata['results'][system['name']]['osfamiliy']
-            if 'operatingsystem' in hostdata['results'][system['name']]:
-                operatingsystem = hostdata['results'][system['name']]['operatingsystem']
+            for key in _facts_mapping.keys():
+                if _facts_mapping[key] in sysdata['facts']:
+                    host_info[key] = hostdata['results'][system['name']][_sysdata_facts_mapping[key]]
+
+
         if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
             virtual = 'hypervisor'
         if not subName in sub_summary:
@@ -256,45 +282,17 @@ for system in systemdata:
             sub_summary[subName][virtual] += amount
         else:
             sub_summary[subName][virtual] = amount
+        host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
+        host_info['entitlements'] = subName
+        host_info['organization'] = orgid
 
         if VERBOSE:
-            print "\tSystem UUID - %s" % system['uuid']
-            print "\tSystem Name - %s" % system['name']
-            print "\tCompliant - %s" % compliant
-            print "\tSubscription Name - %s" % subName
-            print "\tAmount - %s" % amount
-            print "\tAccount Number - %s" % acctNumber
-            print "\tContract Number - %s" % contractNumber
-            print "\tStart Date - %s" % startDate
-            print "\tEnd Date - %s" % endDate
-            print "\tBIOS Vendor - %s" % biosvendor
-            print "\tPhys CPU Count - %s" % physicalprocessorcount
-            print "\tCores - %s" % cores
-            print "\tVirtual - %s" % virtual
-            print "\tHypervisor - %s" % hypervisor
-            print "\tOS Family - %s" % osfamily
-            print "\tOperating System - %s" % operatingsystem
-            print "\tBIOS Version - %s" % biosversion
-            print "\tBIOS Release Date - %s" % biosreleasedate
-            print "\tBIOS manufacturer - %s" % manufacturer
-            print "\tProduct Name - %s" % productname
-            print "\tSerial Number - %s" % serialnumber
-            print "\tBoard UUID - %s" % uuid
-            print "\tBoard Manufacturer - %s" % boardmanufacturer
-            print "\tType - %s" % systype
-            print "\tBoard Serial Number - %s" % boardserialnumber
-            print "\tBoard Product Name - %s" % boardproductname
+            print json.dumps(host_info, sort_keys = False, indent = 2)
             print "=" * 80
             print
 
-        csv_writer_subs.writerow([system['uuid'], system['name'], compliant,
-                                  subName, amount, acctNumber, contractNumber,
-                                  startDate, endDate, physicalprocessorcount,
-                                  cores, virtual, hypervisor, osfamily,
-                                  operatingsystem, biosvendor, biosversion,
-                                  biosreleasedate, manufacturer, productname,
-                                  serialnumber, uuid, boardmanufacturer,
-                                  systype, boardserialnumber, boardproductname])
+        row = [host_info[x] for x in title_row]
+        csv_writer_subs.writerow(row)
 
 print "\nSubscription Usage Summary:"
 for subscription in sub_summary:
