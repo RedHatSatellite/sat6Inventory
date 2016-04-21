@@ -136,20 +136,27 @@ for system in systemdata:
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, subdetailedurl)
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, hostdetailedurl)
     try:
-        sysinfo = urllib2.Request(sysdetailedurl)
-        subinfo = urllib2.Request(subdetailedurl)
-        hostinfo = urllib2.Request(hostdetailedurl)
         base64string = base64.encodestring('%s:%s' % (login, password)).strip()
+
+        sysinfo = urllib2.Request(sysdetailedurl)
         sysinfo.add_header("Authorization", "Basic %s" % base64string)
         sysresult = urllib2.urlopen(sysinfo)
+        sysdata = json.load(sysresult)
+
+        subinfo = urllib2.Request(subdetailedurl)
         subinfo.add_header("Authorization", "Basic %s" % base64string)
         subresult = urllib2.urlopen(subinfo)
-        hostinfo.add_header("Authorization", "Basic %s" % base64string)
-        hostresult = urllib2.urlopen(hostinfo)
-
-        sysdata = json.load(sysresult)
         subdata = json.load(subresult)
-        hostdata = json.load(hostresult)
+
+        if 'type' in sysdata and sysdata['type'] == 'Hypervisor':
+            # skip fetching facts for Hypervisors, they do not submit them anyways
+            hostdata = {'subtotal': 0}
+        else:
+            hostinfo = urllib2.Request(hostdetailedurl)
+            hostinfo.add_header("Authorization", "Basic %s" % base64string)
+            hostresult = urllib2.urlopen(hostinfo)
+            hostdata = json.load(hostresult)
+
         if DEBUG:
             filename = orgid + '_' + system['uuid'] + '_system-output.json'
             print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
