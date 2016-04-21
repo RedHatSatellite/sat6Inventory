@@ -72,6 +72,48 @@ _facts_mapping = {
     'operatingsystem': 'operatingsystem',
 }
 
+_title_mapping = {
+    'uuid': 'UUID',
+    'hostname': 'Name',
+    'registered_by': 'registered by',
+    'registration_time': 'registration time',
+    'last_checkin_time': 'last checkin time',
+    'katello_agent_installed': 'Katello agent installed',
+    'ip_address': 'IPv4 Address',
+    'ipv6_address': 'IPv6 Address',
+    'virt_type': 'Virt Type',
+    'kernel_version': 'Kernel version',
+    'architecture': 'Architecture',
+    'is_virtualized': 'is virtualized',
+    'cores': 'Cores',
+    'num_sockets': 'Phys CPU Count',
+    'virtual_host': 'Virtual Host UUID',
+    'virtual_host_name': 'Virtual Host Name',
+    'errata_out_of_date': 'Errata out of date',
+    'packages_out_of_date': 'Packages out of date',
+    'biosvendor': 'BIOS vendor',
+    'biosversion': 'BIOS version',
+    'biosreleasedate': 'BIOS release data',
+    'manufacturer': 'manufacturer',
+    'productname': 'product name',
+    'serialnumber': 'serialnumber',
+    'systemuuid': 'System UUD',
+    'boardmanufacturer': 'board manufacturer',
+    'systype': 'System type',
+    'boardserialnumber': 'board serialnumber',
+    'boardproductname': 'board productname',
+    'memorysize': 'memory size',
+    'virtual': 'virtual',
+    'osfamiliy': 'osfamiliy',
+    'operatingsystem': 'operatingsystem',
+    'entitlements': 'Subscription Name',
+    'software_channel': 'Software Channel',
+    'configuration_channel': 'Configuration Channel',
+    'system_group': 'System group',
+    'organization': 'Organization',
+    'hardware': 'Hardware',
+}
+
 
 parser = OptionParser()
 parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN")
@@ -157,7 +199,8 @@ title_row = ['UUID','Name', 'Compliant', 'Subscription Name', 'Amount',
              'BIOS Release Date', 'System Manufacturer', 'System Product Name',
              'Serial Number', 'Board UUID', 'Chassis Manufacturer', 'Type',
              'Chassis Serial #', 'Chassis Product Name']
-title_row = ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware']
+columns = ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware']
+title_row = [_title_mapping[x] for x in columns]
 
 csv_writer_subs.writerow(title_row)
 
@@ -290,7 +333,7 @@ for system in systemdata:
             print "=" * 80
             print
 
-        row = [host_info[x] for x in title_row]
+        row = [host_info[x] for x in columns]
         csv_writer_subs.writerow(row)
 
 print "\nSubscription Usage Summary:"
