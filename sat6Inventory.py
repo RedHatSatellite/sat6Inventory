@@ -68,7 +68,7 @@ _facts_mapping = {
     'boardproductname': 'boardproductname',
     'memorysize': 'memorysize',
     'virtual': 'virtual',
-    'osfamiliy': 'osfamiliy',
+    'osfamily': 'osfamily',
     'operatingsystem': 'operatingsystem',
 }
 
@@ -104,7 +104,7 @@ _title_mapping = {
     'boardproductname': 'board productname',
     'memorysize': 'memory size',
     'virtual': 'virtual',
-    'osfamiliy': 'osfamiliy',
+    'osfamily': 'osfamily',
     'operatingsystem': 'operatingsystem',
     'entitlements': 'Subscription Name',
     'software_channel': 'Software Channel',
