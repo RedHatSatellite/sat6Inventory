@@ -78,9 +78,10 @@ systemdata = []
 
 try:
     page = 0
-    while (page == 0 or jsonresult['per_page'] == len(jsonresult['results'])):
+    per_page = 100
+    while (page == 0 or int(jsonresult['per_page']) == len(jsonresult['results'])):
         page += 1
-        url = "https://" + satellite + "/katello/api/v2/systems?full=true&page=" + str(page)
+        url = "https://" + satellite + "/katello/api/v2/systems?page=" + str(page) + "&per_page=" + str(per_page)
         request = urllib2.Request(url)
         if VERBOSE:
             print "=" * 80
