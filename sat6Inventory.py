@@ -91,27 +91,35 @@ _title_mapping = {
     'virtual_host_name': 'Virtual Host Name',
     'errata_out_of_date': 'Errata out of date',
     'packages_out_of_date': 'Packages out of date',
-    'biosvendor': 'BIOS vendor',
-    'biosversion': 'BIOS version',
-    'biosreleasedate': 'BIOS release data',
-    'manufacturer': 'manufacturer',
-    'productname': 'product name',
-    'serialnumber': 'serialnumber',
-    'systemuuid': 'System UUD',
-    'boardmanufacturer': 'board manufacturer',
+    'biosvendor': 'BIOS Vendor',
+    'biosversion': 'BIOS Version',
+    'biosreleasedate': 'BIOS Release Date',
+    'manufacturer': 'System Manufacturer',
+    'productname': 'System Product Name',
+    'serialnumber': 'Serial Number',
+    'systemuuid': 'Board UUID',
+    'boardmanufacturer': 'Chassis Manufacturer',
     'systype': 'System type',
-    'boardserialnumber': 'board serialnumber',
-    'boardproductname': 'board productname',
+    'boardserialnumber': 'Chassis Serial Number',
+    'boardproductname': 'Chassis Product Name',
     'memorysize': 'memory size',
-    'virtual': 'virtual',
-    'osfamily': 'osfamily',
-    'operatingsystem': 'operatingsystem',
+    'virtual': 'Virtual',
+    'osfamily': 'OS Family',
+    'operatingsystem': 'Operatin Ssystem',
     'entitlements': 'Subscription Name',
+    'entitlement': 'Subscription Name',
     'software_channel': 'Software Channel',
     'configuration_channel': 'Configuration Channel',
     'system_group': 'System group',
     'organization': 'Organization',
     'hardware': 'Hardware',
+    'compliant': 'Compliant',
+    'amount': 'Amount',
+    'account_number': 'Account Number',
+    'contract_number': 'Contract Number',
+    'start_date': 'Start Date',
+    'end_date': 'End Date',
+    'hypervisor': 'Hypervisor',
 }
 
 
@@ -268,28 +276,31 @@ for system in systemdata:
     except Exception, e:
         print "FATAL Error - %s" % (e)
     for entitlement in subdata["results"]:
-        # Get the Amount of subs
-        amount = entitlement['amount']
-        subName = entitlement['product_name']
-        acctNumber = entitlement['account_number']
-        contractNumber = entitlement['contract_number']
-        startDate = entitlement['start_date']
-        endDate = entitlement['end_date']
-        hypervisor = "NA"
-        virtual = "NA"
-        if entitlement.has_key('host'):
-            hypervisor = entitlement['host']['id']
-            virtual = 'virtual'
-        compliant = "NA"
-        if sysdata.has_key('compliance'):
-            compliant = sysdata['compliance']['compliant']
-            if not compliant:
-                incompliant[system['uuid']] = system['name']
-
         host_info = {}
         fake = ['software_channel', 'configuration_channel', 'system_group']
         for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
             host_info[key] = 'unknown'
+
+        # Get the Amount of subs
+        subName = entitlement['product_name']
+        host_info['amount'] = entitlement['amount']
+        host_info['entitlement'] = entitlement['product_name']
+        host_info['entitlements'] = entitlement['product_name']
+        host_info['organization'] = orgid
+        host_info['account_number'] = entitlement['account_number']
+        host_info['contract_number'] = entitlement['contract_number']
+        host_info['start_date'] = entitlement['start_date']
+        host_info['end_date'] = entitlement['end_date']
+        host_info['hypervisor'] = "NA"
+        virtual = "NA"
+        if entitlement.has_key('host'):
+            host_info['hypervisor'] = entitlement['host']['id']
+            host_info['virtual'] = 'virtual'
+        host_info['compliant'] = "NA"
+        if sysdata.has_key('compliance'):
+            host_info['compliant'] = sysdata['compliance']['compliant']
+            if not host_info['compliant']:
+                incompliant[system['uuid']] = system['name']
 
         for key in _sysdata_mapping.keys():
             if _sysdata_mapping[key] in sysdata:
@@ -317,16 +328,14 @@ for system in systemdata:
 
 
         if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
-            virtual = 'hypervisor'
+            host_info['virtual'] = 'hypervisor'
         if not subName in sub_summary:
             sub_summary[subName] = {}
         if virtual in sub_summary[subName]:
-            sub_summary[subName][virtual] += amount
+            sub_summary[subName][virtual] += host_info['amount']
         else:
-            sub_summary[subName][virtual] = amount
+            sub_summary[subName][virtual] = host_info['amount']
         host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
-        host_info['entitlements'] = subName
-        host_info['organization'] = orgid
 
         if VERBOSE:
             print json.dumps(host_info, sort_keys = False, indent = 2)
