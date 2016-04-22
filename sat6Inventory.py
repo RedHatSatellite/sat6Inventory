@@ -122,6 +122,11 @@ _title_mapping = {
     'hypervisor': 'Hypervisor',
 }
 
+_format_columns_mapping = {
+  'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname'],
+  'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware']
+}
+
 
 parser = OptionParser()
 parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN")
@@ -130,6 +135,8 @@ parser.add_option("-s", "--satellite", dest="satellite", help="FQDN of Satellite
 parser.add_option("-o", "--orgid",  dest="orgid", help="Label of the Organization in Satellite that is to be queried", metavar="ORGID")
 parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="Verbose output")
 parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debugging output (debug output enables verbose)")
+parser.add_option("-c", "--columns", dest="columns", help="coma separated list of columns to add to the output")
+parser.add_option("-f", "--format", dest="format", help="use an predefined output format", choices=_format_columns_mapping.keys())
 (options, args) = parser.parse_args()
 
 
@@ -169,6 +176,18 @@ else:
 if options.verbose:
     VERBOSE = True
 
+if options.columns and options.format:
+    parser.error("you cannot specify both, columns and format!")
+elif options.columns:
+    columns = options.columns.split(',')
+    for c in columns:
+        if c not in _title_mapping.keys():
+            parser.error("unknown column '%s'" % (c))
+else:
+    if not options.format:
+        options.format = 'original'
+    columns = _format_columns_mapping[options.format]
+
 if hasattr(ssl, '_create_unverified_context'):
     ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -200,14 +219,6 @@ except Exception, e:
 
 csv_writer_subs = csv.writer(open(orgid + "_inventory_report.csv", "wb"), delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
-title_row = ['UUID','Name', 'Compliant', 'Subscription Name', 'Amount',
-             'Account #', 'Contract #', 'Start Date', 'End Date',
-             'Phys CPU Count', 'Cores', 'Virtual', 'Hypervisor', 'OS Family',
-             'Operating System', 'BIOS Vendor', 'BIOS Version',
-             'BIOS Release Date', 'System Manufacturer', 'System Product Name',
-             'Serial Number', 'Board UUID', 'Chassis Manufacturer', 'Type',
-             'Chassis Serial #', 'Chassis Product Name']
-columns = ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware']
 title_row = [_title_mapping[x] for x in columns]
 
 csv_writer_subs.writerow(title_row)
