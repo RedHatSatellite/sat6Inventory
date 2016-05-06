@@ -105,7 +105,7 @@ title_row = ['Name', 'Subscription Name', 'Amount', 'Account #', 'Contract #',
              'Start Date', 'End Date', 'BIOS Vendor', 'BIOS Version',
              'BIOS Release Date', 'System Manufacturer', 'System Product Name',
              'Serial Number', 'UUID', 'Chassis Manufacturer', 'Type',
-             'Chassis Serial #', 'Chassis Product Name']
+             'Chassis Serial #', 'Chassis Product Name', 'Is Virtual Server', 'Number of Physical CPU Sockets']
 
 csv_writer_subs.writerow(title_row)
 
@@ -170,6 +170,8 @@ for system in systemdata:
         boardserialnumber = "NA"
         boardproductname = "NA"
         billingCode = "NA"
+        isvirtual = "NA"
+        numcpusockets = "NA"
         if hostdata['subtotal'] > 0:
             if 'bios_vendor' in hostdata['results'][system['name']]:
                 biosvendor = hostdata['results'][system['name']]['bios_vendor']
@@ -193,6 +195,10 @@ for system in systemdata:
                 boardserialnumber = hostdata['results'][system['name']]['boardserialnumber']
             if 'boardproductname' in hostdata['results'][system['name']]:
                 boardproductname = hostdata['results'][system['name']]['boardproductname']
+            if 'is_virtual' in hostdata['results'][system['name']]:
+                isvirtual = hostdata['results'][system['name']]['is_virtual']
+            if 'physicalprocessorcount' in hostdata['results'][system['name']]:
+                numcpusockets = hostdata['results'][system['name']]['physicalprocessorcount']
 
         if VERBOSE:
             print "\tSystem Name - %s" % system['name']
@@ -213,10 +219,12 @@ for system in systemdata:
             print "\tType - %s" % systype
             print "\tBoard Serial Number - %s" % boardserialnumber
             print "\tBoard Product Name - %s" % boardproductname
+            print "\tIs Virtual Server - %s" % isvirtual
+            print "\tNumber of Physical CPU Sockets- %s" % numcpusockets
             print "=" * 80
             print
 
         csv_writer_subs.writerow([system['name'], subName, amount, acctNumber, contractNumber,
                                   startDate, endDate, biosvendor, biosversion, biosreleasedate,
                                   manufacturer, productname, serialnumber, uuid, boardmanufacturer,
-                                  systype, boardserialnumber, boardproductname])
+                                  systype, boardserialnumber, boardproductname, isvirtual, numcpusockets])
