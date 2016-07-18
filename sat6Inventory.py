@@ -19,6 +19,7 @@
 import json
 import getpass
 import urllib2
+import urllib
 import base64
 import sys
 import ssl
@@ -140,6 +141,7 @@ parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="
 parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debugging output (debug output enables verbose)")
 parser.add_option("-c", "--columns", dest="columns", help="coma separated list of columns to add to the output")
 parser.add_option("-f", "--format", dest="format", help="use an predefined output format", choices=_format_columns_mapping.keys())
+parser.add_option("-S", "--search", dest="search", help="limit report to machines matching this search")
 (options, args) = parser.parse_args()
 
 
@@ -201,7 +203,10 @@ try:
     per_page = 100
     while (page == 0 or int(jsonresult['per_page']) == len(jsonresult['results'])):
         page += 1
-        url = "https://" + satellite + "/katello/api/v2/systems?page=" + str(page) + "&per_page=" + str(per_page)
+        q = [('page', page), ('per_page', per_page)]
+        if options.search:
+            q.append(('search', options.search))
+        url = "https://" + satellite + "/katello/api/v2/systems?" + urllib.urlencode(q)
         request = urllib2.Request(url)
         if VERBOSE:
             print "=" * 80
