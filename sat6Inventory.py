@@ -80,7 +80,9 @@ _title_mapping = {
     'last_checkin_time': 'last checkin time',
     'katello_agent_installed': 'Katello agent installed',
     'ip_address': 'IPv4 Address',
+    'ip_addresses': 'IPv4 Addresses',
     'ipv6_address': 'IPv6 Address',
+    'ipv6_addresses': 'IPv6 Addresses',
     'virt_type': 'Virt Type',
     'kernel_version': 'Kernel version',
     'architecture': 'Architecture',
@@ -124,7 +126,8 @@ _title_mapping = {
 
 _format_columns_mapping = {
   'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets'],
-  'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware']
+  'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
+  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets'],
 }
 
 
@@ -321,6 +324,16 @@ for system in systemdata:
             for key in _sysdata_facts_mapping.keys():
                 if _sysdata_facts_mapping[key] in sysdata['facts']:
                     host_info[key] = sysdata['facts'][_sysdata_facts_mapping[key]]
+            ipv4s = []
+            ipv6s = []
+            for key in sysdata['facts']:
+                if key.startswith('net.interface.') and not key.startswith('net.interface.lo.'):
+                    if key.endswith('.ipv4_address'):
+                        ipv4s.append(sysdata['facts'][key])
+                    elif key.endswith('.ipv6_address'):
+                        ipv6s.append(sysdata['facts'][key])
+            host_info['ip_addresses'] = ';'.join(ipv4s)
+            host_info['ipv6_addresses'] = ';'.join(ipv6s)
 
         if 'virtual_host' in sysdata and sysdata['virtual_host']:
             for key in _sysdata_virtual_host_mapping.keys():
