@@ -25,6 +25,112 @@ import ssl
 import csv
 from optparse import OptionParser
 
+_sysdata_mapping = {
+    'uuid': 'uuid',
+    'hostname': 'name',
+    'registered_by': 'registered_by',
+    'registration_time': 'created',
+    'last_checkin_time': 'checkin_time',
+    'katello_agent_installed': 'katello_agent_installed',
+}
+
+_sysdata_facts_mapping = {
+    'ip_address': 'network.ipv4_address',
+    'ipv6_address': 'network.ipv6_address',
+    'virt_type': 'virt.host_type',
+    'kernel_version': 'uname.release',
+    'architecture': 'uname.machine',
+    'is_virtualized': 'virt.is_guest',
+    'cores': 'cpu.cpu(s)',
+    'num_sockets': 'cpu.cpu_socket(s)',
+}
+
+_sysdata_virtual_host_mapping = {
+    'virtual_host': 'uuid',
+    'virtual_host_name': 'name',
+}
+_sysdata_errata_mapping = {
+    'errata_out_of_date': 'total',
+    'packages_out_of_date': 'total',
+}
+
+_facts_mapping = {
+    'biosvendor': 'bios_vendor',
+    'biosversion': 'bios_version',
+    'biosreleasedate': 'bios_release_date',
+    'manufacturer': 'manufacturer',
+    'productname': 'productname',
+    'serialnumber': 'serialnumber',
+    'systemuuid': 'uuid',
+    'boardmanufacturer': 'boardmanufacturer',
+    'systype': 'type',
+    'boardserialnumber': 'boardserialnumber',
+    'boardproductname': 'boardproductname',
+    'memorysize': 'memorysize',
+    'virtual': 'virtual',
+    'osfamily': 'osfamily',
+    'operatingsystem': 'operatingsystem',
+}
+
+_title_mapping = {
+    'uuid': 'UUID',
+    'hostname': 'Name',
+    'registered_by': 'registered by',
+    'registration_time': 'registration time',
+    'last_checkin_time': 'last checkin time',
+    'katello_agent_installed': 'Katello agent installed',
+    'ip_address': 'IPv4 Address',
+    'ip_addresses': 'IPv4 Addresses',
+    'ipv6_address': 'IPv6 Address',
+    'ipv6_addresses': 'IPv6 Addresses',
+    'virt_type': 'Virt Type',
+    'kernel_version': 'Kernel version',
+    'architecture': 'Architecture',
+    'is_virtualized': 'is virtualized',
+    'cores': 'Cores',
+    'num_sockets': 'Phys CPU Count',
+    'virtual_host': 'Virtual Host UUID',
+    'virtual_host_name': 'Virtual Host Name',
+    'errata_out_of_date': 'Errata out of date',
+    'packages_out_of_date': 'Packages out of date',
+    'biosvendor': 'BIOS Vendor',
+    'biosversion': 'BIOS Version',
+    'biosreleasedate': 'BIOS Release Date',
+    'manufacturer': 'System Manufacturer',
+    'productname': 'System Product Name',
+    'serialnumber': 'Serial Number',
+    'systemuuid': 'Board UUID',
+    'boardmanufacturer': 'Chassis Manufacturer',
+    'systype': 'System type',
+    'boardserialnumber': 'Chassis Serial Number',
+    'boardproductname': 'Chassis Product Name',
+    'memorysize': 'memory size',
+    'virtual': 'Virtual',
+    'osfamily': 'OS Family',
+    'operatingsystem': 'Operatin Ssystem',
+    'entitlements': 'Subscription Name',
+    'entitlement': 'Subscription Name',
+    'software_channel': 'Software Channel',
+    'configuration_channel': 'Configuration Channel',
+    'system_group': 'System group',
+    'organization': 'Organization',
+    'hardware': 'Hardware',
+    'compliant': 'Compliant',
+    'amount': 'Amount',
+    'account_number': 'Account Number',
+    'contract_number': 'Contract Number',
+    'start_date': 'Start Date',
+    'end_date': 'End Date',
+    'hypervisor': 'Hypervisor',
+}
+
+_format_columns_mapping = {
+  'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets'],
+  'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
+  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets'],
+}
+
+
 parser = OptionParser()
 parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN")
 parser.add_option("-p", "--password", dest="password", help="Password for specified user. Will prompt if omitted", metavar="PASSWORD")
@@ -32,6 +138,8 @@ parser.add_option("-s", "--satellite", dest="satellite", help="FQDN of Satellite
 parser.add_option("-o", "--orgid",  dest="orgid", help="Label of the Organization in Satellite that is to be queried", metavar="ORGID")
 parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="Verbose output")
 parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debugging output (debug output enables verbose)")
+parser.add_option("-c", "--columns", dest="columns", help="coma separated list of columns to add to the output")
+parser.add_option("-f", "--format", dest="format", help="use an predefined output format", choices=_format_columns_mapping.keys())
 (options, args) = parser.parse_args()
 
 
@@ -71,6 +179,18 @@ else:
 if options.verbose:
     VERBOSE = True
 
+if options.columns and options.format:
+    parser.error("you cannot specify both, columns and format!")
+elif options.columns:
+    columns = options.columns.split(',')
+    for c in columns:
+        if c not in _title_mapping.keys():
+            parser.error("unknown column '%s'" % (c))
+else:
+    if not options.format:
+        options.format = 'original'
+    columns = _format_columns_mapping[options.format]
+
 if hasattr(ssl, '_create_unverified_context'):
     ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -78,9 +198,10 @@ systemdata = []
 
 try:
     page = 0
-    while (page == 0 or jsonresult['per_page'] == len(jsonresult['results'])):
+    per_page = 100
+    while (page == 0 or int(jsonresult['per_page']) == len(jsonresult['results'])):
         page += 1
-        url = "https://" + satellite + "/katello/api/v2/systems?full=true&page=" + str(page)
+        url = "https://" + satellite + "/katello/api/v2/systems?page=" + str(page) + "&per_page=" + str(per_page)
         request = urllib2.Request(url)
         if VERBOSE:
             print "=" * 80
@@ -101,11 +222,7 @@ except Exception, e:
 
 csv_writer_subs = csv.writer(open(orgid + "_inventory_report.csv", "wb"), delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
-title_row = ['Name', 'Subscription Name', 'Amount', 'Account #', 'Contract #',
-             'Start Date', 'End Date', 'BIOS Vendor', 'BIOS Version',
-             'BIOS Release Date', 'System Manufacturer', 'System Product Name',
-             'Serial Number', 'UUID', 'Chassis Manufacturer', 'Type',
-             'Chassis Serial #', 'Chassis Product Name', 'Is Virtual Server', 'Number of Physical CPU Sockets']
+title_row = [_title_mapping[x] for x in columns]
 
 csv_writer_subs.writerow(title_row)
 
@@ -117,114 +234,149 @@ if VERBOSE:
 if DEBUG:
     with open(orgid + '_all_systems-output.json', 'w') as outfile:
         json.dump(systemdata, outfile)
+    outfile.close()
+
+sub_summary = {}
+incompliant = {}
 
 for system in systemdata:
-    detailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
+    sysdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "?fields=full"
+    subdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
     hostdetailedurl = "https://" + satellite + "/api/v2/hosts/" + system["name"] + "/facts?per_page=99999"
 
     if VERBOSE:
         print "=" * 80
-        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, detailedurl)
+        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, sysdetailedurl)
+        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, subdetailedurl)
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, hostdetailedurl)
     try:
-        sysinfo = urllib2.Request(detailedurl)
-        hostinfo = urllib2.Request(hostdetailedurl)
         base64string = base64.encodestring('%s:%s' % (login, password)).strip()
+
+        sysinfo = urllib2.Request(sysdetailedurl)
         sysinfo.add_header("Authorization", "Basic %s" % base64string)
         sysresult = urllib2.urlopen(sysinfo)
-        hostinfo.add_header("Authorization", "Basic %s" % base64string)
-        hostresult = urllib2.urlopen(hostinfo)
         sysdata = json.load(sysresult)
-        hostresult = urllib2.urlopen(hostinfo)
-        hostdata = json.load(hostresult)
+
+        subinfo = urllib2.Request(subdetailedurl)
+        subinfo.add_header("Authorization", "Basic %s" % base64string)
+        subresult = urllib2.urlopen(subinfo)
+        subdata = json.load(subresult)
+
+        if 'type' in sysdata and sysdata['type'] == 'Hypervisor':
+            # skip fetching facts for Hypervisors, they do not submit them anyways
+            hostdata = {'subtotal': 0}
+        else:
+            hostinfo = urllib2.Request(hostdetailedurl)
+            hostinfo.add_header("Authorization", "Basic %s" % base64string)
+            hostresult = urllib2.urlopen(hostinfo)
+            hostdata = json.load(hostresult)
+
         if DEBUG:
-            filename = orgid + '_' + system['name'] + '_system-output.json'
+            filename = orgid + '_' + system['uuid'] + '_system-output.json'
             print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
-                json.dump(systemdata, outfile)
+                json.dump(sysdata, outfile)
             outfile.close()
-            filename = orgid + '_' + system['name'] + '_system-facts.json'
-            print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
+            filename = orgid + '_' + system['uuid'] + '_subscription-output.json'
+            print "[%sDEBUG%s] Subscription output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
+            with open(filename, 'w') as outfile:
+                json.dump(subdata, outfile)
+            outfile.close()
+            filename = orgid + '_' + system['uuid'] + '_system-facts.json'
+            print "[%sDEBUG%s] Facts output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(hostdata, outfile)
             outfile.close()
     except Exception, e:
         print "FATAL Error - %s" % (e)
-    for entitlement in sysdata["results"]:
+    for entitlement in subdata["results"]:
+        host_info = {}
+        fake = ['software_channel', 'configuration_channel', 'system_group']
+        for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
+            host_info[key] = 'unknown'
+
         # Get the Amount of subs
-        amount = entitlement['amount']
         subName = entitlement['product_name']
-        acctNumber = entitlement['account_number']
-        contractNumber = entitlement['contract_number']
-        startDate = entitlement['start_date']
-        endDate = entitlement['end_date']
-        biosvendor = "NA"
-        biosversion = "NA"
-        biosreleasedate = "NA"
-        manufacturer = "NA"
-        productname = "NA"
-        serialnumber = "NA"
-        uuid = "NA"
-        boardmanufacturer = "NA"
-        systype = "NA"
-        boardserialnumber = "NA"
-        boardproductname = "NA"
-        billingCode = "NA"
-        isvirtual = "NA"
-        numcpusockets = "NA"
+        host_info['amount'] = entitlement['amount']
+        host_info['entitlement'] = entitlement['product_name']
+        host_info['entitlements'] = entitlement['product_name']
+        host_info['organization'] = orgid
+        host_info['account_number'] = entitlement['account_number']
+        host_info['contract_number'] = entitlement['contract_number']
+        host_info['start_date'] = entitlement['start_date']
+        host_info['end_date'] = entitlement['end_date']
+        host_info['hypervisor'] = "NA"
+        virtual = "NA"
+        if entitlement.has_key('host'):
+            host_info['hypervisor'] = entitlement['host']['id']
+            host_info['virtual'] = 'virtual'
+        host_info['compliant'] = "NA"
+        if sysdata.has_key('compliance'):
+            host_info['compliant'] = sysdata['compliance']['compliant']
+            if not host_info['compliant']:
+                incompliant[system['uuid']] = system['name']
+
+        for key in _sysdata_mapping.keys():
+            if _sysdata_mapping[key] in sysdata:
+                host_info[key] = sysdata[_sysdata_mapping[key]]
+
+        if 'facts' in sysdata and sysdata['facts']:
+            for key in _sysdata_facts_mapping.keys():
+                if _sysdata_facts_mapping[key] in sysdata['facts']:
+                    host_info[key] = sysdata['facts'][_sysdata_facts_mapping[key]]
+            ipv4s = []
+            ipv6s = []
+            for key in sysdata['facts']:
+                if key.startswith('net.interface.') and not key.startswith('net.interface.lo.'):
+                    if key.endswith('.ipv4_address'):
+                        ipv4s.append(sysdata['facts'][key])
+                    elif key.endswith('.ipv6_address'):
+                        ipv6s.append(sysdata['facts'][key])
+            host_info['ip_addresses'] = ';'.join(ipv4s)
+            host_info['ipv6_addresses'] = ';'.join(ipv6s)
+
+        if 'virtual_host' in sysdata and sysdata['virtual_host']:
+            for key in _sysdata_virtual_host_mapping.keys():
+                if _sysdata_virtual_host_mapping[key] in sysdata['virtual_host']:
+                    host_info[key] = sysdata['virtual_host'][_sysdata_virtual_host_mapping[key]]
+
+        if 'errata_counts' in sysdata and sysdata['errata_counts']:
+            for key in _sysdata_errata_mapping.keys():
+                if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
+                    host_info[key] = sysdata['errata_counts'][_sysdata_errata_mapping[key]]
+
         if hostdata['subtotal'] > 0:
-            if 'bios_vendor' in hostdata['results'][system['name']]:
-                biosvendor = hostdata['results'][system['name']]['bios_vendor']
-            if 'bios_version' in hostdata['results'][system['name']]:
-                biosversion = hostdata['results'][system['name']]['bios_version']
-            if 'bios_release_date' in hostdata['results'][system['name']]:
-                biosreleasedate = hostdata['results'][system['name']]['bios_release_date']
-            if 'manufacturer' in hostdata['results'][system['name']]:
-                manufacturer = hostdata['results'][system['name']]['manufacturer']
-            if 'proudctname' in hostdata['results'][system['name']]:
-                productname = hostdata['results'][system['name']]['productname']
-            if 'serialnumber' in hostdata['results'][system['name']]:
-                serialnumber = hostdata['results'][system['name']]['serialnumber']
-            if 'uuid' in hostdata['results'][system['name']]:
-                uuid = hostdata['results'][system['name']]['uuid']
-            if 'boardmanufacturer' in hostdata['results'][system['name']]:
-                boardmanufacturer = hostdata['results'][system['name']]['boardmanufacturer']
-            if 'type' in hostdata['results'][system['name']]:
-                systype = hostdata['results'][system['name']]['type']
-            if 'boardserialnumber' in hostdata['results'][system['name']]:
-                boardserialnumber = hostdata['results'][system['name']]['boardserialnumber']
-            if 'boardproductname' in hostdata['results'][system['name']]:
-                boardproductname = hostdata['results'][system['name']]['boardproductname']
-            if 'is_virtual' in hostdata['results'][system['name']]:
-                isvirtual = hostdata['results'][system['name']]['is_virtual']
-            if 'physicalprocessorcount' in hostdata['results'][system['name']]:
-                numcpusockets = hostdata['results'][system['name']]['physicalprocessorcount']
+            for key in _facts_mapping.keys():
+                if _facts_mapping[key] in sysdata['facts']:
+                    host_info[key] = hostdata['results'][system['name']][_sysdata_facts_mapping[key]]
+
+
+        if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
+            host_info['virtual'] = 'hypervisor'
+        if not subName in sub_summary:
+            sub_summary[subName] = {}
+        if virtual in sub_summary[subName]:
+            sub_summary[subName][virtual] += host_info['amount']
+        else:
+            sub_summary[subName][virtual] = host_info['amount']
+        host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
 
         if VERBOSE:
-            print "\tSystem Name - %s" % system['name']
-            print "\tSubscription Name - %s" % subName
-            print "\tAmount - %s" % amount
-            print "\tAccount Number - %s" % acctNumber
-            print "\tContract Number - %s" % contractNumber
-            print "\tStart Date - %s" % startDate
-            print "\tEnd Date - %s" % endDate
-            print "\tBIOS Vendor - %s" % biosvendor
-            print "\tBIOS Version - %s" % biosversion
-            print "\tBIOS Release Date - %s" % biosreleasedate
-            print "\tBIOS manufacturer - %s" % manufacturer
-            print "\tProduct Name - %s" % productname
-            print "\tSerial Number - %s" % serialnumber
-            print "\tUUID - %s" % uuid
-            print "\tBoard Manufacturer - %s" % boardmanufacturer
-            print "\tType - %s" % systype
-            print "\tBoard Serial Number - %s" % boardserialnumber
-            print "\tBoard Product Name - %s" % boardproductname
-            print "\tIs Virtual Server - %s" % isvirtual
-            print "\tNumber of Physical CPU Sockets- %s" % numcpusockets
+            print json.dumps(host_info, sort_keys = False, indent = 2)
             print "=" * 80
             print
 
-        csv_writer_subs.writerow([system['name'], subName, amount, acctNumber, contractNumber,
-                                  startDate, endDate, biosvendor, biosversion, biosreleasedate,
-                                  manufacturer, productname, serialnumber, uuid, boardmanufacturer,
-                                  systype, boardserialnumber, boardproductname, isvirtual, numcpusockets])
+        row = [host_info[x] for x in columns]
+        csv_writer_subs.writerow(row)
+
+print "\nSubscription Usage Summary:"
+for subscription in sub_summary:
+    print "%s -->" % subscription
+    for virtual in sub_summary[subscription]:
+        print "\t%s\t- %s" % (virtual,sub_summary[subscription][virtual])
+
+if len (incompliant) > 0:
+    print "\nThere are %s incompliant systems:" % len(incompliant)
+    print "\t\tUUID\t\t\t\tName"
+    for system in incompliant:
+        print "%s\t- %s" % (system, incompliant[system])
