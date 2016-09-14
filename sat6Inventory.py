@@ -153,7 +153,7 @@ class error_colors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
-if not (options.login and options.satellite and options.orgid):
+if not (options.login and options.satellite):
     print "Must specify login, server, and orgid options.  See usage:"
     parser.print_help()
     print "\nExample usage: ./sat6Inventory.py -l admin -s satellite.example.com -o ACME_Corporation"
@@ -162,7 +162,10 @@ else:
     login = options.login
     password = options.password
     satellite = options.satellite
-    orgid = options.orgid
+    if options.orgid:
+        orgid = options.orgid
+    else:
+        orgid = "all"
 
 if not password:
     password = getpass.getpass("%s's password:" % login)
