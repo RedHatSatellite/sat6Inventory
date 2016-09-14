@@ -153,7 +153,7 @@ class error_colors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
-if not (options.login and options.satellite and options.orgid):
+if not (options.login and options.satellite):
     print "Must specify login, server, and orgid options.  See usage:"
     parser.print_help()
     print "\nExample usage: ./sat6Inventory.py -l admin -s satellite.example.com -o ACME_Corporation"
@@ -162,7 +162,10 @@ else:
     login = options.login
     password = options.password
     satellite = options.satellite
-    orgid = options.orgid
+    if options.orgid:
+        orgid = options.orgid
+    else:
+        orgid = "all"
 
 if not password:
     password = getpass.getpass("%s's password:" % login)
@@ -244,6 +247,44 @@ if DEBUG:
 sub_summary = {}
 incompliant = {}
 
+
+def report_sysdata():
+    global key
+    for key in _sysdata_mapping.keys():
+        if _sysdata_mapping[key] in sysdata:
+            host_info[key] = sysdata[_sysdata_mapping[key]]
+    if 'facts' in sysdata and sysdata['facts']:
+        for key in _sysdata_facts_mapping.keys():
+            if _sysdata_facts_mapping[key] in sysdata['facts']:
+                host_info[key] = sysdata['facts'][_sysdata_facts_mapping[key]]
+        ipv4s = []
+        ipv6s = []
+        for key in sysdata['facts']:
+            if key.startswith('net.interface.') and not key.startswith('net.interface.lo.'):
+                if key.endswith('.ipv4_address'):
+                    ipv4s.append(sysdata['facts'][key])
+                elif key.endswith('.ipv6_address'):
+                    ipv6s.append(sysdata['facts'][key])
+        host_info['ip_addresses'] = ';'.join(ipv4s)
+        host_info['ipv6_addresses'] = ';'.join(ipv6s)
+    if 'virtual_host' in sysdata and sysdata['virtual_host']:
+        for key in _sysdata_virtual_host_mapping.keys():
+            if _sysdata_virtual_host_mapping[key] in sysdata['virtual_host']:
+                host_info[key] = sysdata['virtual_host'][_sysdata_virtual_host_mapping[key]]
+    if 'errata_counts' in sysdata and sysdata['errata_counts']:
+        for key in _sysdata_errata_mapping.keys():
+            if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
+                host_info[key] = sysdata['errata_counts'][_sysdata_errata_mapping[key]]
+    if hostdata['subtotal'] > 0:
+        for key in _facts_mapping.keys():
+            if _facts_mapping[key] in sysdata['facts']:
+                host_info[key] = hostdata['results'][system['name']][_sysdata_facts_mapping[key]]
+    if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
+        host_info['virtual'] = 'hypervisor'
+
+    host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
+
+
 for system in systemdata:
     sysdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "?fields=full"
     subdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
@@ -254,6 +295,9 @@ for system in systemdata:
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, sysdetailedurl)
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, subdetailedurl)
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, hostdetailedurl)
+
+    hostdata = {'subtotal': 0}
+
     try:
         base64string = base64.encodestring('%s:%s' % (login, password)).strip()
 
@@ -267,10 +311,8 @@ for system in systemdata:
         subresult = urllib2.urlopen(subinfo)
         subdata = json.load(subresult)
 
-        if 'type' in sysdata and sysdata['type'] == 'Hypervisor':
+        if 'type' in sysdata and sysdata['type'] != 'Hypervisor':
             # skip fetching facts for Hypervisors, they do not submit them anyways
-            hostdata = {'subtotal': 0}
-        else:
             hostinfo = urllib2.Request(hostdetailedurl)
             hostinfo.add_header("Authorization", "Basic %s" % base64string)
             hostresult = urllib2.urlopen(hostinfo)
@@ -293,86 +335,56 @@ for system in systemdata:
                 json.dump(hostdata, outfile)
             outfile.close()
     except Exception, e:
-        print "FATAL Error - %s" % (e)
-    for entitlement in subdata["results"]:
-        host_info = {}
-        fake = ['software_channel', 'configuration_channel', 'system_group']
-        for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
-            host_info[key] = 'unknown'
+        print "Error - %s" % (e)
 
-        # Get the Amount of subs
-        subName = entitlement['product_name']
-        host_info['amount'] = entitlement['amount']
-        host_info['entitlement'] = entitlement['product_name']
-        host_info['entitlements'] = entitlement['product_name']
-        host_info['organization'] = orgid
-        host_info['account_number'] = entitlement['account_number']
-        host_info['contract_number'] = entitlement['contract_number']
-        host_info['start_date'] = entitlement['start_date']
-        host_info['end_date'] = entitlement['end_date']
-        host_info['hypervisor'] = "NA"
-        virtual = "NA"
-        if entitlement.has_key('host'):
-            host_info['hypervisor'] = entitlement['host']['id']
-            host_info['virtual'] = 'virtual'
-        host_info['compliant'] = "NA"
-        if sysdata.has_key('compliance'):
-            host_info['compliant'] = sysdata['compliance']['compliant']
-            if not host_info['compliant']:
-                incompliant[system['uuid']] = system['name']
+    host_info = {}
+    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant']
+    for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
+        host_info[key] = 'unknown'
 
-        for key in _sysdata_mapping.keys():
-            if _sysdata_mapping[key] in sysdata:
-                host_info[key] = sysdata[_sysdata_mapping[key]]
+    # it's possible a server does not have an entitlement applied to it so we need to check for this and skip if not.
+    try:
+        for entitlement in subdata["results"]:
+            # Get the Amount of subs
+            subName = entitlement['product_name']
+            host_info['amount'] = entitlement['amount']
+            host_info['entitlement'] = entitlement['product_name']
+            host_info['entitlements'] = entitlement['product_name']
+            host_info['organization'] = orgid
+            host_info['account_number'] = entitlement['account_number']
+            host_info['contract_number'] = entitlement['contract_number']
+            host_info['start_date'] = entitlement['start_date']
+            host_info['end_date'] = entitlement['end_date']
+            host_info['hypervisor'] = "NA"
+            virtual = "NA"
+            if entitlement.has_key('host'):
+                host_info['hypervisor'] = entitlement['host']['id']
+                host_info['virtual'] = 'virtual'
+            host_info['compliant'] = "NA"
+            if sysdata.has_key('compliance'):
+                host_info['compliant'] = sysdata['compliance']['compliant']
+                if not host_info['compliant']:
+                    incompliant[system['uuid']] = system['name']
 
-        if 'facts' in sysdata and sysdata['facts']:
-            for key in _sysdata_facts_mapping.keys():
-                if _sysdata_facts_mapping[key] in sysdata['facts']:
-                    host_info[key] = sysdata['facts'][_sysdata_facts_mapping[key]]
-            ipv4s = []
-            ipv6s = []
-            for key in sysdata['facts']:
-                if key.startswith('net.interface.') and not key.startswith('net.interface.lo.'):
-                    if key.endswith('.ipv4_address'):
-                        ipv4s.append(sysdata['facts'][key])
-                    elif key.endswith('.ipv6_address'):
-                        ipv6s.append(sysdata['facts'][key])
-            host_info['ip_addresses'] = ';'.join(ipv4s)
-            host_info['ipv6_addresses'] = ';'.join(ipv6s)
+            report_sysdata()
 
-        if 'virtual_host' in sysdata and sysdata['virtual_host']:
-            for key in _sysdata_virtual_host_mapping.keys():
-                if _sysdata_virtual_host_mapping[key] in sysdata['virtual_host']:
-                    host_info[key] = sysdata['virtual_host'][_sysdata_virtual_host_mapping[key]]
-
-        if 'errata_counts' in sysdata and sysdata['errata_counts']:
-            for key in _sysdata_errata_mapping.keys():
-                if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
-                    host_info[key] = sysdata['errata_counts'][_sysdata_errata_mapping[key]]
-
-        if hostdata['subtotal'] > 0:
-            for key in _facts_mapping.keys():
-                if _facts_mapping[key] in sysdata['facts']:
-                    host_info[key] = hostdata['results'][system['name']][_sysdata_facts_mapping[key]]
-
-
-        if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
-            host_info['virtual'] = 'hypervisor'
         if not subName in sub_summary:
             sub_summary[subName] = {}
         if virtual in sub_summary[subName]:
             sub_summary[subName][virtual] += host_info['amount']
         else:
             sub_summary[subName][virtual] = host_info['amount']
-        host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
+    except NameError:
+        # if the server doesn't have a subscription still report sysdata
+        report_sysdata()
 
-        if VERBOSE:
-            print json.dumps(host_info, sort_keys = False, indent = 2)
-            print "=" * 80
-            print
+    if VERBOSE:
+        print json.dumps(host_info, sort_keys = False, indent = 2)
+        print "=" * 80
+        print
 
-        row = [host_info[x] for x in columns]
-        csv_writer_subs.writerow(row)
+    row = [host_info[x] for x in columns]
+    csv_writer_subs.writerow(row)
 
 print "\nSubscription Usage Summary:"
 for subscription in sub_summary:
