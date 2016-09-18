@@ -199,6 +199,28 @@ else:
 if hasattr(ssl, '_create_unverified_context'):
     ssl._create_default_https_context = ssl._create_unverified_context
 
+try:
+    url = "https://" + satellite + "/api/status"
+    request = urllib2.Request(url)
+    if VERBOSE:
+        print "=" * 80
+        print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, url)
+    base64string = base64.encodestring('%s:%s' % (login, password)).strip()
+    request.add_header("Authorization", "Basic %s" % base64string)
+    result = urllib2.urlopen(request)
+    jsonresult = json.load(result)
+    api_version = jsonresult['api_version']
+    if VERBOSE:
+        print "=" * 80
+        print "[%sVERBOSE%s] API Version -> %s " % (error_colors.OKGREEN, error_colors.ENDC, api_version)
+except urllib2.URLError, e:
+    print "Error: cannot connect to the API: %s" % (e)
+    print "Check your URL & try to login using the same user/pass via the WebUI and check the error!"
+    sys.exit(1)
+except Exception, e:
+    print "FATAL Error - %s" % (e)
+    sys.exit(2)
+
 systemdata = []
 
 try:
@@ -287,9 +309,11 @@ def report_sysdata():
 
 for system in systemdata:
     sysdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "?fields=full"
-    subdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
     hostdetailedurl = "https://" + satellite + "/api/v2/hosts/" + system["name"] + "/facts?per_page=99999"
-
+    if api_version == 2:
+        subdetailedurl = "https://" + satellite + "/api/v2/hosts/" + str(system["host_id"]) + "/subscriptions"
+    else:
+        subdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
     if VERBOSE:
         print "=" * 80
         print "[%sVERBOSE%s] Connecting to -> %s " % (error_colors.OKGREEN, error_colors.ENDC, sysdetailedurl)
@@ -347,7 +371,11 @@ for system in systemdata:
         for entitlement in subdata["results"]:
             # Get the Amount of subs
             subName = entitlement['product_name']
-            host_info['amount'] = entitlement['amount']
+            if api_version == 2:
+              host_info['amount'] = entitlement['quantity_consumed']
+            else:
+              host_info['amount'] = entitlement['amount']
+            #host_info['amount'] = entitlement['amount']
             host_info['entitlement'] = entitlement['product_name']
             host_info['entitlements'] = entitlement['product_name']
             host_info['organization'] = orgid
@@ -371,7 +399,10 @@ for system in systemdata:
         if not subName in sub_summary:
             sub_summary[subName] = {}
         if virtual in sub_summary[subName]:
-            sub_summary[subName][virtual] += host_info['amount']
+            if host_info['amount'] == 'unknown':
+                sub_summary[subName][virtual] += 0
+            else:
+                sub_summary[subName][virtual] += int(host_info['amount'])
         else:
             sub_summary[subName][virtual] = host_info['amount']
     except NameError:
