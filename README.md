@@ -32,7 +32,14 @@ Options:
                         queried
   -v, --verbose         Verbose output
   -d, --debug           Debugging output (debug output enables verbose)
-
+  -c COLUMNS, --columns=COLUMNS
+                        coma separated list of columns to add to the output
+  -f FORMAT, --format=FORMAT
+                        use an predefined output format (available formats:
+                        spacewalk-report-inventory-customized, original,
+                        spacewalk-report-inventory)
+  -S SEARCH, --search=SEARCH
+                        limit report to machines matching this search
 ~~~
 # Notes
 

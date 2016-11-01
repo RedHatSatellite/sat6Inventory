@@ -140,7 +140,7 @@ parser.add_option("-o", "--orgid",  dest="orgid", help="Label of the Organizatio
 parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="Verbose output")
 parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debugging output (debug output enables verbose)")
 parser.add_option("-c", "--columns", dest="columns", help="coma separated list of columns to add to the output")
-parser.add_option("-f", "--format", dest="format", help="use an predefined output format", choices=_format_columns_mapping.keys())
+parser.add_option("-f", "--format", dest="format", help="use an predefined output format (available formats: %s)" % ", ".join(_format_columns_mapping.keys()),choices=_format_columns_mapping.keys())
 parser.add_option("-S", "--search", dest="search", help="limit report to machines matching this search")
 (options, args) = parser.parse_args()
 
