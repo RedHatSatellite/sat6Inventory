@@ -396,26 +396,34 @@ for system in systemdata:
 
             report_sysdata()
 
-        if not subName in sub_summary:
-            sub_summary[subName] = {}
-        if virtual in sub_summary[subName]:
-            if host_info['amount'] == 'unknown':
-                sub_summary[subName][virtual] += 0
+            if not subName in sub_summary:
+                sub_summary[subName] = {}
+            if virtual in sub_summary[subName]:
+                if host_info['amount'] == 'unknown':
+                    sub_summary[subName][virtual] += 0
+                else:
+                    sub_summary[subName][virtual] += int(host_info['amount'])
             else:
-                sub_summary[subName][virtual] += int(host_info['amount'])
-        else:
-            sub_summary[subName][virtual] = host_info['amount']
+                sub_summary[subName][virtual] = host_info['amount']
+
+            if VERBOSE:
+                print json.dumps(host_info, sort_keys = False, indent = 2)
+                print "=" * 80
+                print
+
+            row = [host_info[x] for x in columns]
+            csv_writer_subs.writerow(row)
     except NameError:
         # if the server doesn't have a subscription still report sysdata
         report_sysdata()
 
-    if VERBOSE:
-        print json.dumps(host_info, sort_keys = False, indent = 2)
-        print "=" * 80
-        print
+        if VERBOSE:
+            print json.dumps(host_info, sort_keys = False, indent = 2)
+            print "=" * 80
+            print
 
-    row = [host_info[x] for x in columns]
-    csv_writer_subs.writerow(row)
+        row = [host_info[x] for x in columns]
+        csv_writer_subs.writerow(row)
 
 print "\nSubscription Usage Summary:"
 for subscription in sub_summary:
