@@ -1,16 +1,17 @@
 # Overview
-Given a username, password & organization, inventory Satellite 6 and return a report 
-of the registered systems, which suscriptions cover them and which hardware facts that they have
+Given a username, password & organization, inventory Satellite 6 and return a report
+of the registered systems, which subscriptions cover them and which hardware facts that they have
 
 # Requirements
 
 * Python >= 2.6
 * Satellite >= 6.1.x
+* **OPTIONAL** - PyYAML. If PyYAML is installed, the script will attempt to read `/etc/hammer/cli.modules.d/foreman.yml` and `~/.hammer/cli_config.yml` to derive the correct username, password, and host to connect to. If PyYAML is not present, the script will require the parameters to be provided explicitly.
 
 # Usage
 
 ~~~
-↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example' 
+↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example'
 ~~~
 
 # Help Output
@@ -48,23 +49,23 @@ Options:
 
 # Example Output
 
-When run without the -v/--verbose OR -d/--debug switches, sat6Inventory.py has not output,
+When run without the -v/--verbose OR -d/--debug switches, sat6Inventory.py has no output,
 suitable for a cron script.  Results are stored in $ORG_inventory_report.csv, where $ORG
 represents your Organization's Name
 
-When run with the -v/--verbose switch, sat6Inventory.py outputs the URLs used for the various 
+When run with the -v/--verbose switch, sat6Inventory.py outputs the URLs used for the various
 API calls and the parsed output for each system inventoried
 
 ~~~
 ↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example' -v
 ================================================================================
-[VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems?full=true 
+[VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems?full=true
 [VERBOSE] Data will be written to Example_inventory_report.csv
 ================================================================================
 
 ================================================================================
-[VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems/b5ddda0c-4331-491c-af44-1c855f886ccd/subscriptions 
-[VERBOSE] Connecting to -> https://satellite.example.com/api/v2/hosts/virtmgmt.example.com/facts?per_page=99999 
+[VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems/b5ddda0c-4331-491c-af44-1c855f886ccd/subscriptions
+[VERBOSE] Connecting to -> https://satellite.example.com/api/v2/hosts/virtmgmt.example.com/facts?per_page=99999
 	System Name - virtmgmt.example.com
 	Subscription Name - Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)
 	Amount - 2
@@ -88,15 +89,15 @@ API calls and the parsed output for each system inventoried
 ~~~
 
 When run with the -d/--debug switch, in addition to the verbose output above, sat6Inventory.py
-outputs debugging information. Additionally, the response to ALL API calls are saved to the 
-directory where sat6Inventory.py is invoked from. 
+outputs debugging information. Additionally, the response to ALL API calls are saved to the
+directory where sat6Inventory.py is invoked from.
 
 ~~~
 ↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example' -d
 ================================================================================
-[DEBUG] LOGIN -> admin 
+[DEBUG] LOGIN -> admin
 [DEBUG] PASSWORD -> <REDACTED>
-[DEBUG] SATELLITE -> satellite.example.com 
+[DEBUG] SATELLITE -> satellite.example.com
 [DEBUG] ORG ID -> Example
 ================================================================================
 [VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems?full=true
@@ -104,8 +105,8 @@ directory where sat6Inventory.py is invoked from.
 ================================================================================
 [VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems/b5ddda0c-4331-491c-af44-1c855f886ccd/subscriptions
 [VERBOSE] Connecting to -> https://satellite.example.com/api/v2/hosts/virtmgmt.example.com/facts?per_page=99999
-[DEBUG] System output in -> Example_virtmgmt.example.com_system-output.json 
-[DEBUG] System output in -> Example_virtmgmt.example.com_system-facts.json 
+[DEBUG] System output in -> Example_virtmgmt.example.com_system-output.json
+[DEBUG] System output in -> Example_virtmgmt.example.com_system-facts.json
     System Name - virtmgmt.example.com
     Subscription Name - Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)
     Amount - 2
