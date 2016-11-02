@@ -18,6 +18,7 @@
 
 import json
 import getpass
+import os
 import urllib2
 import urllib
 import base64
@@ -25,6 +26,48 @@ import sys
 import ssl
 import csv
 from optparse import OptionParser
+
+default_login     = None
+default_password  = None
+default_satellite = None
+try:
+    import yaml
+    try:
+        _hammer_config = yaml.safe_load(open(os.path.expanduser(' /etc/hammer/cli.modules.d/foreman.yml'), 'r').read())
+        try:
+            default_login = _hammer_config[':foreman'][':username']
+        except KeyError:
+            pass
+        try:
+            default_password = _hammer_config[':foreman'][':password']
+        except KeyError:
+            pass
+        try:
+            default_satellite = _hammer_config[':foreman'][':host'].split('/')[2]
+        except KeyError:
+            pass
+    except (IOError, yaml.parser.ParserError):
+        pass
+    try:
+        _hammer_config = yaml.safe_load(open(os.path.expanduser('~/.hammer/cli_config.yml'), 'r').read())
+        try:
+            default_login = _hammer_config[':foreman'][':username']
+        except KeyError:
+            pass
+        try:
+            default_password = _hammer_config[':foreman'][':password']
+        except KeyError:
+            pass
+        try:
+            default_satellite = _hammer_config[':foreman'][':host'].split('/')[2]
+        except KeyError:
+            pass
+    except (IOError, yaml.parser.ParserError):
+        pass
+except ImportError:
+    print('Could not import YAML module to parse hammer configuration file. verify that it is installed properly')
+    print('Defaulting to prompting for username/password')
+    pass
 
 _sysdata_mapping = {
     'uuid': 'uuid',
@@ -133,9 +176,9 @@ _format_columns_mapping = {
 
 
 parser = OptionParser()
-parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN")
-parser.add_option("-p", "--password", dest="password", help="Password for specified user. Will prompt if omitted", metavar="PASSWORD")
-parser.add_option("-s", "--satellite", dest="satellite", help="FQDN of Satellite - omit https://", metavar="SATELLITE")
+parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN", default=default_login)
+parser.add_option("-p", "--password", dest="password", help="Password for specified user. Will prompt if omitted", metavar="PASSWORD", default=default_password)
+parser.add_option("-s", "--satellite", dest="satellite", help="FQDN of Satellite - omit https://", metavar="SATELLITE", default=default_satellite)
 parser.add_option("-o", "--orgid",  dest="orgid", help="Label of the Organization in Satellite that is to be queried", metavar="ORGID")
 parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="Verbose output")
 parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debugging output (debug output enables verbose)")
