@@ -410,6 +410,7 @@ for system in systemdata:
         host_info[key] = 'unknown'
 
     # it's possible a server does not have an entitlement applied to it so we need to check for this and skip if not.
+    system_had_entitlements = False
     try:
         for entitlement in subdata["results"]:
             # Get the Amount of subs
@@ -456,7 +457,11 @@ for system in systemdata:
 
             row = [host_info[x] for x in columns]
             csv_writer_subs.writerow(row)
+            system_had_entitlements = True
     except NameError:
+        pass
+
+    if not system_had_entitlements:
         # if the server doesn't have a subscription still report sysdata
         report_sysdata()
 
