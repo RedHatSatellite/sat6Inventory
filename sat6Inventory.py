@@ -32,7 +32,7 @@ default_password  = None
 default_satellite = None
 try:
     import yaml
-    for _hammer_config_path in ['/etc/hammer/cli.modules.d/foreman.yml', '~/.hammer/cli_config.yml')]:
+    for _hammer_config_path in ['/etc/hammer/cli.modules.d/foreman.yml', '~/.hammer/cli_config.yml']:
         try:
             _hammer_config = yaml.safe_load(open(os.path.expanduser(_hammer_config_path), 'r').read())
             try:
