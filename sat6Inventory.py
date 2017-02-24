@@ -179,7 +179,8 @@ parser = OptionParser()
 parser.add_option("-l", "--login", dest="login", help="Login user", metavar="LOGIN", default=default_login)
 parser.add_option("-p", "--password", dest="password", help="Password for specified user. Will prompt if omitted", metavar="PASSWORD", default=default_password)
 parser.add_option("-s", "--satellite", dest="satellite", help="FQDN of Satellite - omit https://", metavar="SATELLITE", default=default_satellite)
-parser.add_option("-o", "--orgid",  dest="orgid", help="Label of the Organization in Satellite that is to be queried", metavar="ORGID")
+parser.add_option("-o", "--org",  dest="org", help="Name of the Organization in Satellite that is to be queried", metavar="ORG")
+parser.add_option("--orgid",  dest="orgid", help="ID of the Organization in Satellite that is to be queried", metavar="ORGID")
 parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="Verbose output")
 parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debugging output (debug output enables verbose)")
 parser.add_option("-c", "--columns", dest="columns", help="coma separated list of columns to add to the output")
@@ -205,10 +206,6 @@ else:
     login = options.login
     password = options.password
     satellite = options.satellite
-    if options.orgid:
-        orgid = options.orgid
-    else:
-        orgid = "all"
 
 if not password:
     password = getpass.getpass("%s's password:" % login)
@@ -219,7 +216,8 @@ if options.debug:
     print "[%sDEBUG%s] LOGIN -> %s " % (error_colors.OKBLUE, error_colors.ENDC, login)
     print "[%sDEBUG%s] PASSWORD -> %s " % (error_colors.OKBLUE, error_colors.ENDC, password)
     print "[%sDEBUG%s] SATELLITE -> %s " % (error_colors.OKBLUE, error_colors.ENDC, satellite)
-    print "[%sDEBUG%s] ORG ID -> %s " % (error_colors.OKBLUE, error_colors.ENDC, orgid)
+    print "[%sDEBUG%s] ORG ID -> %s " % (error_colors.OKBLUE, error_colors.ENDC, options.orgid)
+    print "[%sDEBUG%s] ORG NAME -> %s " % (error_colors.OKBLUE, error_colors.ENDC, options.org)
 else:
     DEBUG = False
     VERBOSE = False
@@ -264,6 +262,25 @@ except Exception, e:
     print "FATAL Error - %s" % (e)
     sys.exit(2)
 
+if options.orgid:
+  orgid = options.orgid
+  orgname = options.orgid # FIXME: lookup name
+elif options.org:
+  orgname = options.org
+  search_key = 'name="%s"' % orgname
+  url = "https://" + satellite + "/katello/api/organizations/?" + urllib.urlencode([('search', '' + str(search_key))])
+  request = urllib2.Request(url)
+  base64string = base64.encodestring('%s:%s' % (login, password)).strip()
+  request.add_header("Authorization", "Basic %s" % base64string)
+  result = urllib2.urlopen(request)
+  jsonresult = json.load(result)
+  orgid = jsonresult['results'][0]['id']
+else:
+  orgid = None
+  orgname = "all"
+
+print "Fetching systems for org '%s' (id: %s)" % (orgname, orgid)
+
 systemdata = []
 
 try:
@@ -274,7 +291,10 @@ try:
         q = [('page', page), ('per_page', per_page)]
         if options.search:
             q.append(('search', options.search))
-        url = "https://" + satellite + "/katello/api/v2/systems?" + urllib.urlencode(q)
+        if orgid:
+            url = "https://" + satellite + "/katello/api/v2/organizations/" + str(orgid) + "/systems?" + urllib.urlencode(q)
+        else:
+            url = "https://" + satellite + "/katello/api/v2/systems?" + urllib.urlencode(q)
         request = urllib2.Request(url)
         if VERBOSE:
             print "=" * 80
@@ -293,19 +313,19 @@ except Exception, e:
     print "FATAL Error - %s" % (e)
     sys.exit(2)
 
-csv_writer_subs = csv.writer(open(orgid + "_inventory_report.csv", "wb"), delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+csv_writer_subs = csv.writer(open(orgname + "_inventory_report.csv", "wb"), delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
 title_row = [_title_mapping[x] for x in columns]
 
 csv_writer_subs.writerow(title_row)
 
 if VERBOSE:
-    print "[%sVERBOSE%s] Data will be written to %s_inventory_report.csv" % (error_colors.OKGREEN, error_colors.ENDC, orgid)
+    print "[%sVERBOSE%s] Data will be written to %s_inventory_report.csv" % (error_colors.OKGREEN, error_colors.ENDC, orgname)
 
 
 
 if DEBUG:
-    with open(orgid + '_all_systems-output.json', 'w') as outfile:
+    with open(orgname + '_all_systems-output.json', 'w') as outfile:
         json.dump(systemdata, outfile)
     outfile.close()
 
@@ -386,17 +406,17 @@ for system in systemdata:
             hostdata = json.load(hostresult)
 
         if DEBUG:
-            filename = orgid + '_' + system['uuid'] + '_system-output.json'
+            filename = orgname + '_' + system['uuid'] + '_system-output.json'
             print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(sysdata, outfile)
             outfile.close()
-            filename = orgid + '_' + system['uuid'] + '_subscription-output.json'
+            filename = orgname + '_' + system['uuid'] + '_subscription-output.json'
             print "[%sDEBUG%s] Subscription output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(subdata, outfile)
             outfile.close()
-            filename = orgid + '_' + system['uuid'] + '_system-facts.json'
+            filename = orgname + '_' + system['uuid'] + '_system-facts.json'
             print "[%sDEBUG%s] Facts output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(hostdata, outfile)
@@ -421,7 +441,7 @@ for system in systemdata:
             #host_info['amount'] = entitlement['amount']
             host_info['entitlement'] = entitlement['product_name']
             host_info['entitlements'] = entitlement['product_name']
-            host_info['organization'] = orgid
+            host_info['organization'] = orgname
             host_info['account_number'] = entitlement['account_number']
             host_info['contract_number'] = entitlement['contract_number']
             host_info['start_date'] = entitlement['start_date']
