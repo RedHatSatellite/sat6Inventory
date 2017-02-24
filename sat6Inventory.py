@@ -32,38 +32,23 @@ default_password  = None
 default_satellite = None
 try:
     import yaml
-    try:
-        _hammer_config = yaml.safe_load(open(os.path.expanduser(' /etc/hammer/cli.modules.d/foreman.yml'), 'r').read())
+    for _hammer_config_path in ['/etc/hammer/cli.modules.d/foreman.yml', '~/.hammer/cli_config.yml')]:
         try:
-            default_login = _hammer_config[':foreman'][':username']
-        except KeyError:
+            _hammer_config = yaml.safe_load(open(os.path.expanduser(_hammer_config_path), 'r').read())
+            try:
+                default_login = _hammer_config[':foreman'][':username']
+            except KeyError:
+                pass
+            try:
+                default_password = _hammer_config[':foreman'][':password']
+            except KeyError:
+                pass
+            try:
+                default_satellite = _hammer_config[':foreman'][':host'].split('/')[2]
+            except KeyError:
+                pass
+        except (IOError, yaml.parser.ParserError):
             pass
-        try:
-            default_password = _hammer_config[':foreman'][':password']
-        except KeyError:
-            pass
-        try:
-            default_satellite = _hammer_config[':foreman'][':host'].split('/')[2]
-        except KeyError:
-            pass
-    except (IOError, yaml.parser.ParserError):
-        pass
-    try:
-        _hammer_config = yaml.safe_load(open(os.path.expanduser('~/.hammer/cli_config.yml'), 'r').read())
-        try:
-            default_login = _hammer_config[':foreman'][':username']
-        except KeyError:
-            pass
-        try:
-            default_password = _hammer_config[':foreman'][':password']
-        except KeyError:
-            pass
-        try:
-            default_satellite = _hammer_config[':foreman'][':host'].split('/')[2]
-        except KeyError:
-            pass
-    except (IOError, yaml.parser.ParserError):
-        pass
 except ImportError:
     print('Could not import YAML module to parse hammer configuration file. verify that it is installed properly')
     print('Defaulting to prompting for username/password')
