@@ -63,6 +63,17 @@ _sysdata_mapping = {
     'katello_agent_installed': 'katello_agent_installed',
 }
 
+_sysdata_subscription_facet_attributes_mapping = {
+    'uuid': 'uuid',
+    'registered_by': 'registered_by',
+    'registration_time': 'registered_at',
+    'last_checkin_time': 'last_checkin',
+}
+
+_sysdata_content_facet_attributes_mapping = {
+    'katello_agent_installed': 'katello_agent_installed',
+}
+
 _sysdata_facts_mapping = {
     'ip_address': 'network.ipv4_address',
     'ipv6_address': 'network.ipv6_address',
@@ -74,10 +85,22 @@ _sysdata_facts_mapping = {
     'num_sockets': 'cpu.cpu_socket(s)',
 }
 
+_sysdata_facts_mapping_v2 = {
+    'ip_address': 'network::ipv4_address',
+    'ipv6_address': 'network::ipv6_address',
+    'virt_type': 'virt::host_type',
+    'kernel_version': 'uname::release',
+    'architecture': 'uname::machine',
+    'is_virtualized': 'virt::is_guest',
+    'cores': 'cpu::cpu(s)',
+    'num_sockets': 'cpu::cpu_socket(s)',
+}
+
 _sysdata_virtual_host_mapping = {
     'virtual_host': 'uuid',
     'virtual_host_name': 'name',
 }
+
 _sysdata_errata_mapping = {
     'errata_out_of_date': 'total',
     'packages_out_of_date': 'total',
@@ -276,10 +299,16 @@ try:
         q = [('page', page), ('per_page', per_page)]
         if options.search:
             q.append(('search', options.search))
-        if orgid:
-            url = "https://" + satellite + "/katello/api/v2/organizations/" + str(orgid) + "/systems?" + urllib.urlencode(q)
+        if api_version == 2:
+            if orgid:
+                url = "https://" + satellite + "/api/v2/organizations/" + str(orgid) + "/hosts?" + urllib.urlencode(q)
+            else:
+                url = "https://" + satellite + "/api/v2/hosts?" + urllib.urlencode(q)
         else:
-            url = "https://" + satellite + "/katello/api/v2/systems?" + urllib.urlencode(q)
+            if orgid:
+                url = "https://" + satellite + "/katello/api/v2/organizations/" + str(orgid) + "/systems?" + urllib.urlencode(q)
+            else:
+                url = "https://" + satellite + "/katello/api/v2/systems?" + urllib.urlencode(q)
         request = urllib2.Request(url)
         if VERBOSE:
             print "=" * 80
@@ -323,17 +352,28 @@ def report_sysdata():
     for key in _sysdata_mapping.keys():
         if _sysdata_mapping[key] in sysdata:
             host_info[key] = sysdata[_sysdata_mapping[key]]
+    if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes']:
+        for key in _sysdata_subscription_facet_attributes_mapping.keys():
+            if _sysdata_subscription_facet_attributes_mapping[key] in sysdata['subscription_facet_attributes']:
+                host_info[key] = sysdata['subscription_facet_attributes'][_sysdata_subscription_facet_attributes_mapping[key]]
+    if 'content_facet_attributes' in sysdata and sysdata['content_facet_attributes']:
+        for key in _sysdata_content_facet_attributes_mapping.keys():
+            if _sysdata_content_facet_attributes_mapping[key] in sysdata['content_facet_attributes']:
+                host_info[key] = sysdata['content_facet_attributes'][_sysdata_content_facet_attributes_mapping[key]]
     if 'facts' in sysdata and sysdata['facts']:
         for key in _sysdata_facts_mapping.keys():
             if _sysdata_facts_mapping[key] in sysdata['facts']:
                 host_info[key] = sysdata['facts'][_sysdata_facts_mapping[key]]
+        for key in _sysdata_facts_mapping_v2.keys():
+            if _sysdata_facts_mapping_v2[key] in sysdata['facts']:
+                host_info[key] = sysdata['facts'][_sysdata_facts_mapping_v2[key]]
         ipv4s = []
         ipv6s = []
         for key in sysdata['facts']:
-            if key.startswith('net.interface.') and not key.startswith('net.interface.lo.'):
-                if key.endswith('.ipv4_address'):
+            if (key.startswith('net.interface.') or key.startswith('net::interface::')) and not (key.startswith('net.interface.lo.') or key.startswith('net::interface::lo::')):
+                if key.endswith('.ipv4_address') or key.endswith('::ipv4_address'):
                     ipv4s.append(sysdata['facts'][key])
-                elif key.endswith('.ipv6_address'):
+                elif key.endswith('.ipv6_address') or key.endswith('::ipv6_address'):
                     ipv6s.append(sysdata['facts'][key])
         host_info['ip_addresses'] = ';'.join(ipv4s)
         host_info['ipv6_addresses'] = ';'.join(ipv6s)
@@ -341,26 +381,35 @@ def report_sysdata():
         for key in _sysdata_virtual_host_mapping.keys():
             if _sysdata_virtual_host_mapping[key] in sysdata['virtual_host']:
                 host_info[key] = sysdata['virtual_host'][_sysdata_virtual_host_mapping[key]]
+    if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'virtual_host' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['virtual_host']:
+        for key in _sysdata_virtual_host_mapping.keys():
+            if _sysdata_virtual_host_mapping[key] in sysdata['subscription_facet_attributes']['virtual_host']:
+                host_info[key] = sysdata['subscription_facet_attributes']['virtual_host'][_sysdata_virtual_host_mapping[key]]
     if 'errata_counts' in sysdata and sysdata['errata_counts']:
         for key in _sysdata_errata_mapping.keys():
             if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
                 host_info[key] = sysdata['errata_counts'][_sysdata_errata_mapping[key]]
+    if 'content_facet_attributes' in sysdata and sysdata['content_facet_attributes'] and 'errata_counts' in sysdata['content_facet_attributes'] and sysdata['content_facet_attributes']['errata_counts']:
+        for key in _sysdata_errata_mapping.keys():
+            if _sysdata_errata_mapping[key] in sysdata['content_facet_attributes']['errata_counts']:
+                host_info[key] = sysdata['content_facet_attributes']['errata_counts'][_sysdata_errata_mapping[key]]
     if hostdata['subtotal'] > 0:
         for key in _facts_mapping.keys():
             if _facts_mapping[key] in sysdata['facts']:
                 host_info[key] = hostdata['results'][system['name']][_sysdata_facts_mapping[key]]
-    if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
+    if ('virtual_guests' in sysdata and sysdata['virtual_guests']) or ('subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'virtual_guests' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['virtual_guests']):
         host_info['virtual'] = 'hypervisor'
 
     host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
 
 
 for system in systemdata:
-    sysdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "?fields=full"
     hostdetailedurl = "https://" + satellite + "/api/v2/hosts/" + system["name"] + "/facts?per_page=99999"
     if api_version == 2:
-        subdetailedurl = "https://" + satellite + "/api/v2/hosts/" + str(system["host_id"]) + "/subscriptions"
+        sysdetailedurl = "https://" + satellite + "/api/v2/hosts/" + str(system["id"]) + "?fields=full"
+        subdetailedurl = "https://" + satellite + "/api/v2/hosts/" + str(system["id"]) + "/subscriptions"
     else:
+        sysdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "?fields=full"
         subdetailedurl = "https://" + satellite + "/katello/api/v2/systems/" + system["uuid"] + "/subscriptions"
     if VERBOSE:
         print "=" * 80
@@ -391,17 +440,17 @@ for system in systemdata:
             hostdata = json.load(hostresult)
 
         if DEBUG:
-            filename = orgname + '_' + system['uuid'] + '_system-output.json'
+            filename = orgname + '_' + system['name'] + '_system-output.json'
             print "[%sDEBUG%s] System output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(sysdata, outfile)
             outfile.close()
-            filename = orgname + '_' + system['uuid'] + '_subscription-output.json'
+            filename = orgname + '_' + system['name'] + '_subscription-output.json'
             print "[%sDEBUG%s] Subscription output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(subdata, outfile)
             outfile.close()
-            filename = orgname + '_' + system['uuid'] + '_system-facts.json'
+            filename = orgname + '_' + system['name'] + '_system-facts.json'
             print "[%sDEBUG%s] Facts output in -> %s " % (error_colors.OKBLUE, error_colors.ENDC, filename)
             with open(filename, 'w') as outfile:
                 json.dump(hostdata, outfile)
