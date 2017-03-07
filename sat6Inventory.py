@@ -371,9 +371,9 @@ def report_sysdata():
         ipv6s = []
         for key in sysdata['facts']:
             if (key.startswith('net.interface.') or key.startswith('net::interface::')) and not (key.startswith('net.interface.lo.') or key.startswith('net::interface::lo::')):
-                if key.endswith('.ipv4_address') or key.endswith('::ipv4_address'):
+                if (key.endswith('.ipv4_address') or key.endswith('::ipv4_address')) and sysdata['facts'][key]:
                     ipv4s.append(sysdata['facts'][key])
-                elif key.endswith('.ipv6_address') or key.endswith('::ipv6_address'):
+                elif (key.endswith('.ipv6_address') or key.endswith('::ipv6_address')) and sysdata['facts'][key]:
                     ipv6s.append(sysdata['facts'][key])
         host_info['ip_addresses'] = ';'.join(ipv4s)
         host_info['ipv6_addresses'] = ';'.join(ipv6s)
