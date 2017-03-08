@@ -422,15 +422,21 @@ for system in systemdata:
     try:
         base64string = base64.encodestring('%s:%s' % (login, password)).strip()
 
-        sysinfo = urllib2.Request(sysdetailedurl)
-        sysinfo.add_header("Authorization", "Basic %s" % base64string)
-        sysresult = urllib2.urlopen(sysinfo)
-        sysdata = json.load(sysresult)
+        try:
+            sysinfo = urllib2.Request(sysdetailedurl)
+            sysinfo.add_header("Authorization", "Basic %s" % base64string)
+            sysresult = urllib2.urlopen(sysinfo)
+            sysdata = json.load(sysresult)
+        except urllib2.HTTPError:
+            sysdata = system
 
-        subinfo = urllib2.Request(subdetailedurl)
-        subinfo.add_header("Authorization", "Basic %s" % base64string)
-        subresult = urllib2.urlopen(subinfo)
-        subdata = json.load(subresult)
+        try:
+            subinfo = urllib2.Request(subdetailedurl)
+            subinfo.add_header("Authorization", "Basic %s" % base64string)
+            subresult = urllib2.urlopen(subinfo)
+            subdata = json.load(subresult)
+        except urllib2.HTTPError:
+            subdata = {'results': []}
 
         if 'type' in sysdata and sysdata['type'] != 'Hypervisor':
             # skip fetching facts for Hypervisors, they do not submit them anyways
