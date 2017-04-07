@@ -143,6 +143,8 @@ _title_mapping = {
     'num_sockets': 'Phys CPU Count',
     'virtual_host': 'Virtual Host UUID',
     'virtual_host_name': 'Virtual Host Name',
+    'virtual_guests': 'Virtual Guests',
+    'num_virtual_guests': 'Virtual Guest Count',
     'errata_out_of_date': 'Errata out of date',
     'packages_out_of_date': 'Packages out of date',
     'biosvendor': 'BIOS Vendor',
@@ -177,9 +179,9 @@ _title_mapping = {
 }
 
 _format_columns_mapping = {
-  'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets'],
+  'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets', 'num_virtual_guests'],
   'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
-  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets'],
+  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets', 'num_virtual_guests'],
 }
 
 
@@ -381,10 +383,16 @@ def report_sysdata():
         for key in _sysdata_virtual_host_mapping.keys():
             if _sysdata_virtual_host_mapping[key] in sysdata['virtual_host']:
                 host_info[key] = sysdata['virtual_host'][_sysdata_virtual_host_mapping[key]]
+    if 'virtual_guests' in sysdata and sysdata['virtual_guests']:
+        host_info['virtual_guests'] = ','.join([x['name'] for x in sysdata['virtual_guests']])
+        host_info['num_virtual_guests'] = len(sysdata['virtual_guests'])
     if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'virtual_host' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['virtual_host']:
         for key in _sysdata_virtual_host_mapping.keys():
             if _sysdata_virtual_host_mapping[key] in sysdata['subscription_facet_attributes']['virtual_host']:
                 host_info[key] = sysdata['subscription_facet_attributes']['virtual_host'][_sysdata_virtual_host_mapping[key]]
+    if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'virtual_guests' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['virtual_guests']:
+        host_info['virtual_guests'] = ','.join([x['name'] for x in sysdata['subscription_facet_attributes']['virtual_guests']])
+        host_info['num_virtual_guests'] = len(sysdata['subscription_facet_attributes']['virtual_guests'])
     if 'errata_counts' in sysdata and sysdata['errata_counts']:
         for key in _sysdata_errata_mapping.keys():
             if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
@@ -465,7 +473,7 @@ for system in systemdata:
         print "Error - %s" % (e)
 
     host_info = {}
-    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses']
+    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests']
     for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
         host_info[key] = 'unknown'
 
