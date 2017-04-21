@@ -275,7 +275,17 @@ except Exception, e:
 
 if options.orgid:
   orgid = options.orgid
-  orgname = options.orgid # FIXME: lookup name
+  url = "https://" + satellite + "/katello/api/organizations/" + orgid
+  request = urllib2.Request(url)
+  base64string = base64.encodestring('%s:%s' % (login, password)).strip()
+  request.add_header("Authorization", "Basic %s" % base64string)
+  try:
+    result = urllib2.urlopen(request)
+    jsonresult = json.load(result)
+    orgname = jsonresult['name']
+  except urllib2.HTTPError:
+    print "Could not find Organization with id '%s'" % orgid
+    sys.exit(1)
 elif options.org:
   orgname = options.org
   search_key = 'name="%s"' % orgname
