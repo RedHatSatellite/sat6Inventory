@@ -161,7 +161,7 @@ _title_mapping = {
     'memorysize': 'memory size',
     'virtual': 'Virtual',
     'osfamily': 'OS Family',
-    'operatingsystem': 'Operatin Ssystem',
+    'operatingsystem': 'Operating System',
     'entitlements': 'Subscription Name',
     'entitlement': 'Subscription Name',
     'software_channel': 'Software Channel',
