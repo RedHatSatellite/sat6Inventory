@@ -285,7 +285,11 @@ elif options.org:
   request.add_header("Authorization", "Basic %s" % base64string)
   result = urllib2.urlopen(request)
   jsonresult = json.load(result)
-  orgid = jsonresult['results'][0]['id']
+  if jsonresult['results']:
+    orgid = jsonresult['results'][0]['id']
+  else:
+    print "Could not find Organization with name '%s'" % orgname
+    sys.exit(1)
 else:
   orgid = None
   orgname = "all"
