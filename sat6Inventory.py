@@ -177,12 +177,13 @@ _title_mapping = {
     'end_date': 'End Date',
     'hypervisor': 'Hypervisor',
     'derived_entitlement': 'Derived Entitlement',
+    'location': 'Location',
 }
 
 _format_columns_mapping = {
   'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets', 'num_virtual_guests'],
   'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
-  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets', 'num_virtual_guests', 'derived_entitlement'],
+  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets', 'num_virtual_guests', 'derived_entitlement', 'location'],
 }
 
 
@@ -425,6 +426,10 @@ def report_sysdata():
 
     host_info['hardware'] = "%s CPUs %s Sockets" % (host_info['cores'], host_info['num_sockets'])
 
+    if 'location_name' in sysdata:
+        host_info['location'] = sysdata['location_name']
+    else:
+        host_info['location'] = "Unavailable"
 
 for system in systemdata:
     hostdetailedurl = "https://" + satellite + "/api/v2/hosts/" + system["name"] + "/facts?per_page=99999"
