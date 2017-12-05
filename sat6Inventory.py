@@ -146,6 +146,8 @@ _title_mapping = {
     'virtual_guests': 'Virtual Guests',
     'num_virtual_guests': 'Virtual Guest Count',
     'activation_keys': 'Activation Keys',
+    'installed_products': 'Installed Products',
+    'installed_products_ids': 'Installed Product IDs',
     'errata_out_of_date': 'Errata out of date',
     'packages_out_of_date': 'Packages out of date',
     'biosvendor': 'BIOS Vendor',
@@ -412,6 +414,9 @@ def report_sysdata():
         host_info['num_virtual_guests'] = len(sysdata['subscription_facet_attributes']['virtual_guests'])
     if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'activation_keys' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['activation_keys']:
         host_info['activation_keys'] = ','.join([x['name'] for x in sysdata['subscription_facet_attributes']['activation_keys']])
+    if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'installed_products' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['installed_products']:
+        host_info['installed_products'] = ','.join([x['productName'] for x in sysdata['subscription_facet_attributes']['installed_products']])
+        host_info['installed_products_ids'] = ','.join([x['productId'] for x in sysdata['subscription_facet_attributes']['installed_products']])
     if 'errata_counts' in sysdata and sysdata['errata_counts']:
         for key in _sysdata_errata_mapping.keys():
             if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
@@ -496,7 +501,7 @@ for system in systemdata:
         print "Error - %s" % (e)
 
     host_info = {}
-    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests', 'activation_keys', 'derived_entitlement']
+    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests', 'activation_keys', 'installed_products', 'installed_products_ids', 'derived_entitlement']
     for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
         host_info[key] = 'unknown'
 
