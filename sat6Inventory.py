@@ -315,7 +315,7 @@ try:
     per_page = 100
     while (page == 0 or int(jsonresult['per_page']) == len(jsonresult['results'])):
         page += 1
-        q = [('page', page), ('per_page', per_page)]
+        q = [('page', page), ('per_page', per_page), ('thin', '1')]
         if options.search:
             q.append(('search', options.search))
         if api_version == 2:
