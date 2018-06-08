@@ -72,6 +72,7 @@ _sysdata_subscription_facet_attributes_mapping = {
 
 _sysdata_content_facet_attributes_mapping = {
     'katello_agent_installed': 'katello_agent_installed',
+    'packages_out_of_date': 'upgradable_package_count',
 }
 
 _sysdata_facts_mapping = {
@@ -103,7 +104,6 @@ _sysdata_virtual_host_mapping = {
 
 _sysdata_errata_mapping = {
     'errata_out_of_date': 'total',
-    'packages_out_of_date': 'total',
 }
 
 _facts_mapping = {
@@ -496,7 +496,7 @@ for system in systemdata:
         print "Error - %s" % (e)
 
     host_info = {}
-    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests', 'activation_keys', 'derived_entitlement']
+    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests', 'activation_keys', 'derived_entitlement', 'packages_out_of_date']
     for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
         host_info[key] = 'unknown'
 
