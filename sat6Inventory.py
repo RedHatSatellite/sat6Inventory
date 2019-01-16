@@ -165,6 +165,7 @@ _title_mapping = {
     'operatingsystem': 'Operating System',
     'entitlements': 'Subscription Name',
     'entitlement': 'Subscription Name',
+    'product_sku' : 'Product Sku',
     'software_channel': 'Software Channel',
     'configuration_channel': 'Configuration Channel',
     'system_group': 'System group',
@@ -184,7 +185,7 @@ _title_mapping = {
 _format_columns_mapping = {
   'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets', 'num_virtual_guests'],
   'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
-  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets', 'num_virtual_guests', 'derived_entitlement', 'location'],
+  'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'product_sku', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets', 'num_virtual_guests', 'derived_entitlement', 'location'],
 }
 
 
@@ -496,7 +497,7 @@ for system in systemdata:
         print "Error - %s" % (e)
 
     host_info = {}
-    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests', 'activation_keys', 'derived_entitlement']
+    fake = ['software_channel', 'configuration_channel', 'system_group', 'amount', 'entitlement', 'product_sku', 'entitlements', 'organization', 'account_number', 'contract_number', 'start_date', 'end_date', 'hypervisor', 'virtual', 'compliant', 'ip_addresses', 'ipv6_addresses', 'num_virtual_guests', 'virtual_guests', 'activation_keys', 'derived_entitlement']
     for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
         host_info[key] = 'unknown'
 
@@ -518,6 +519,7 @@ for system in systemdata:
 
             host_info['entitlement'] = entitlement['product_name']
             host_info['entitlements'] = entitlement['product_name']
+            host_info['product_sku'] = entitlement['product_id']
             host_info['organization'] = orgname
             host_info['account_number'] = entitlement['account_number']
             host_info['contract_number'] = entitlement['contract_number']
