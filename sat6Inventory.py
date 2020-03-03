@@ -32,7 +32,7 @@ default_password  = None
 default_satellite = None
 try:
     import yaml
-    for _hammer_config_path in ['/etc/hammer/cli.modules.d/foreman.yml', '~/.hammer/cli_config.yml']:
+    for _hammer_config_path in ['/etc/hammer/cli.modules.d/foreman.yml', '~/.hammer/cli_config.yml', '~/.hammer/cli.modules.d/foreman.yml']:
         try:
             _hammer_config = yaml.safe_load(open(os.path.expanduser(_hammer_config_path), 'r').read())
             try:
@@ -60,6 +60,8 @@ _sysdata_mapping = {
     'registered_by': 'registered_by',
     'registration_time': 'created',
     'last_checkin_time': 'checkin_time',
+    'installed_products': 'installed_products',
+    'installed_product_names': 'installed_product_names',
     'katello_agent_installed': 'katello_agent_installed',
 }
 
@@ -68,6 +70,7 @@ _sysdata_subscription_facet_attributes_mapping = {
     'registered_by': 'registered_by',
     'registration_time': 'registered_at',
     'last_checkin_time': 'last_checkin',
+    'product_id': 'product_id',
 }
 
 _sysdata_content_facet_attributes_mapping = {
@@ -139,6 +142,8 @@ _title_mapping = {
     'kernel_version': 'Kernel version',
     'architecture': 'Architecture',
     'is_virtualized': 'is virtualized',
+	'installed_products': 'Installed Products',
+	'installed_product_names': 'Installed Product Names',
     'cores': 'Cores',
     'num_sockets': 'Phys CPU Count',
     'virtual_host': 'Virtual Host UUID',
@@ -163,6 +168,7 @@ _title_mapping = {
     'virtual': 'Virtual',
     'osfamily': 'OS Family',
     'operatingsystem': 'Operating System',
+    'product_id': 'SKU',
     'entitlements': 'Subscription Name',
     'entitlement': 'Subscription Name',
     'software_channel': 'Software Channel',
@@ -182,8 +188,8 @@ _title_mapping = {
 }
 
 _format_columns_mapping = {
-  'original': ['uuid', 'hostname', 'compliant', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets', 'num_virtual_guests'],
-  'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
+  'original': ['uuid', 'hostname', 'compliant', 'product_id', 'installed_products', 'entitlements', 'amount', 'account_number', 'contract_number', 'start_date', 'end_date', 'num_sockets', 'cores', 'virtual', 'hypervisor', 'osfamily', 'operatingsystem', 'biosvendor', 'biosversion', 'biosreleasedate', 'manufacturer', 'systype', 'boardserialnumber', 'boardproductname', 'is_virtualized', 'num_sockets', 'num_virtual_guests'],
+  'spacewalk-report-inventory': ['uuid', 'hostname', 'ip_address', 'ipv6_address', 'registered_by', 'installed_products', 'installed_product_names', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'hardware'],
   'spacewalk-report-inventory-customized': ['uuid', 'hostname', 'ip_addresses', 'ipv6_addresses', 'registered_by', 'registration_time', 'last_checkin_time', 'kernel_version', 'packages_out_of_date', 'errata_out_of_date', 'software_channel', 'configuration_channel', 'entitlements', 'system_group', 'organization', 'virtual_host', 'virtual_host_name', 'architecture', 'is_virtualized', 'virt_type', 'katello_agent_installed', 'cores', 'num_sockets', 'num_virtual_guests', 'derived_entitlement', 'location'],
 }
 
@@ -412,6 +418,12 @@ def report_sysdata():
         host_info['num_virtual_guests'] = len(sysdata['subscription_facet_attributes']['virtual_guests'])
     if 'subscription_facet_attributes' in sysdata and sysdata['subscription_facet_attributes'] and 'activation_keys' in sysdata['subscription_facet_attributes'] and sysdata['subscription_facet_attributes']['activation_keys']:
         host_info['activation_keys'] = ','.join([x['name'] for x in sysdata['subscription_facet_attributes']['activation_keys']])
+    if 'subscription_facet_attributes' in sysdata:
+    	host_info['installed_products'] = ','.join([x['productId'] for x in sysdata['subscription_facet_attributes']['installed_products']])
+    	host_info['installed_product_names'] = ','.join([x['productName'] for x in sysdata['subscription_facet_attributes']['installed_products']])
+    else:
+    	host_info['installed_products'] = "NA"
+    	host_info['installed_product_names'] = "NA"
     if 'errata_counts' in sysdata and sysdata['errata_counts']:
         for key in _sysdata_errata_mapping.keys():
             if _sysdata_errata_mapping[key] in sysdata['errata_counts']:
@@ -500,6 +512,7 @@ for system in systemdata:
     for key in _sysdata_mapping.keys() + _sysdata_facts_mapping.keys() + _sysdata_virtual_host_mapping.keys() + _sysdata_errata_mapping.keys() + _facts_mapping.keys() + fake:
         host_info[key] = 'unknown'
 
+    host_info['product_id'] = "NA" 
     # it's possible a server does not have an entitlement applied to it so we need to check for this and skip if not.
     system_had_entitlements = False
     try:
