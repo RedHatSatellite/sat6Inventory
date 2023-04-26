@@ -12,7 +12,7 @@ of the registered systems, which subscriptions cover them and which hardware fac
 # Usage
 
 ~~~
-↪ ./satellite_inventory.py -s satellite.example.com -l admin -o 'Example'
+↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example'
 ~~~
 
 # Help Output
@@ -94,7 +94,7 @@ outputs debugging information. Additionally, the response to ALL API calls are s
 directory where sat6Inventory.py is invoked from.
 
 ~~~
-↪ ./satellite_inventory.py -s satellite.example.com -l admin -o 'Example' -d
+↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example' -d
 ================================================================================
 [DEBUG] LOGIN -> admin
 [DEBUG] PASSWORD -> <REDACTED>
