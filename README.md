@@ -5,6 +5,7 @@ of the registered systems, which subscriptions cover them and which hardware fac
 # Requirements
 
 * Python >= 2.6
+* Python >= 3
 * Satellite >= 6.12.x
 * **OPTIONAL** - PyYAML. If PyYAML is installed, the script will attempt to read `/etc/hammer/cli.modules.d/foreman.yml` and `~/.hammer/cli_config.yml` to derive the correct username, password, and host to connect to. If PyYAML is not present, the script will require the parameters to be provided explicitly.
 
