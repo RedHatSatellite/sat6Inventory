@@ -5,13 +5,13 @@ of the registered systems, which subscriptions cover them and which hardware fac
 # Requirements
 
 * Python >= 2.6
-* Satellite >= 6.1.x
+* Satellite >= 6.12.x
 * **OPTIONAL** - PyYAML. If PyYAML is installed, the script will attempt to read `/etc/hammer/cli.modules.d/foreman.yml` and `~/.hammer/cli_config.yml` to derive the correct username, password, and host to connect to. If PyYAML is not present, the script will require the parameters to be provided explicitly.
 
 # Usage
 
 ~~~
-↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example'
+↪ ./satellite_inventory.py -s satellite.example.com -l admin -o 'Example'
 ~~~
 
 # Help Output
@@ -57,7 +57,7 @@ When run with the -v/--verbose switch, sat6Inventory.py outputs the URLs used fo
 API calls and the parsed output for each system inventoried
 
 ~~~
-↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example' -v
+↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Organization' -v
 ================================================================================
 [VERBOSE] Connecting to -> https://satellite.example.com/katello/api/v2/systems?full=true
 [VERBOSE] Data will be written to Example_inventory_report.csv
@@ -93,7 +93,7 @@ outputs debugging information. Additionally, the response to ALL API calls are s
 directory where sat6Inventory.py is invoked from.
 
 ~~~
-↪ ./sat6Inventory.py -s satellite.example.com -l admin -o 'Example' -d
+↪ ./satellite_inventory.py -s satellite.example.com -l admin -o 'Example' -d
 ================================================================================
 [DEBUG] LOGIN -> admin
 [DEBUG] PASSWORD -> <REDACTED>
